@@ -1,0 +1,495 @@
+/* based on node_chat's fu.js (http://github.com/ry/node_chat), modified by benoit.favre@gmail.com 2010-07-05
+ * - Added basic authentication
+ * - Added document root handling
+ * - Added basic handling for JSON through POST
+ * - Added basic partial content handling (in docroot only)
+ */
+var createServer = require("http").createServer;
+var fs = require("fs");
+var sys = require("sys");
+var url = require("url");
+var base64 = require("./base64");
+var path = require("path");
+DEBUG = true;
+
+var fu = exports;
+
+var NOT_FOUND = "Not Found\n";
+
+function notFound(req, res) {
+  res.writeHead(404, { "Content-Type": "text/plain"
+                     , "Content-Length": NOT_FOUND.length
+                     });
+  res.end(NOT_FOUND);
+}
+
+var NOT_IMPLEMENTED = "Not Implemented";
+function notImplemented(req, res) {
+  res.writeHead(501, { "Content-Type": "text/plain"
+                     , "Content-Length": NOT_IMPLEMENTED.length
+                     });
+  res.end(NOT_IMPLEMENTED);
+}
+
+var getMap = {};
+// to activate basic authentication with single user/password pair:
+// fu.basicAuth = "user:password";
+fu.basicAuth = null;
+fu.documentRoot = null;
+
+fu.get = function (path, handler) {
+  getMap[path] = handler;
+};
+
+// stay running in case of error!
+/*process.addListener('uncaughtException', function (err) {
+    sys.debug('Caught exception: ' + err);
+});*/
+
+var server = createServer(function (req, res) {
+      console.log(req.method + " " + req.url);// + " " + JSON.stringify(req.headers));
+      if (req.method === "GET" || req.method === "HEAD" || req.method === "POST") {
+         if(fu.basicAuth == null || (req.headers.authorization && base64.decode(req.headers.authorization.split(" ")[1]) == fu.basicAuth)) {
+
+            res.simpleText = function (code, body) {
+              res.writeHead(code, { "Content-Type": "text/plain"
+                                  , "Content-Length": body.length
+                                  });
+              res.end(body);
+            };
+
+            res.simpleJSON = function (code, obj) {
+              var body = JSON.stringify(obj);
+              res.writeHead(code, { "Content-Type": "application/json"
+                                  , "Content-Length": body.length
+                                  });
+              res.end(body);
+            };
+
+            var handler = getMap[url.parse(req.url).pathname];
+            if(handler == null) {
+                if(fu.documentRoot != null) {
+                    documentRootHandler(req, res);
+                } else {
+                    notFound(req, res);
+                }
+            } else {
+                handler(req, res);
+            }
+         } else {
+            res.writeHead(401, {
+                'Content-Type': 'text/plain',
+                'WWW-Authenticate': 'Basic realm="Secure Area"',
+            });
+            res.end('Error 401: Authentication failed\n');
+         }
+      }
+});
+
+fu.listen = function (port, host) {
+  server.listen(port, host);
+  console.log("Server at http://" + (host || "0.0.0.0") + ":" + port.toString() + "/");
+};
+
+fu.close = function () { server.close(); };
+
+function extname (path) {
+  var index = path.lastIndexOf(".");
+  return index < 0 ? "" : path.substring(index);
+}
+
+function sendFile(fd, position, res) {
+    Buffer = require('buffer').Buffer;
+    buf = new Buffer(4096);
+    fs.read(fd, buffer, 0 , 4096, position, function(err, byteRead) {
+        if(byteRead == 0) {
+            res.end();
+            fs.close(fd);
+        } else {
+            res.write(buffer);
+            sendFile(fd, position + byteRead, res);
+        }
+    });
+}
+
+function documentRootHandler(req, res) {
+  var filename = fu.documentRoot + url.parse(req.url).pathname;
+  path.exists(filename, function(exists) {
+    if(exists) {
+        var content_type = fu.mime.lookupExtension(extname(filename));
+        //console.log("loading " + filename + "...");
+        /*fs.open(filename, "r", function(err, fd) {
+            fs.stat(filename, function(err, stat) {
+                headers = { "Content-Type": content_type
+                          , "Content-Length": stats.size
+                          };
+                res.writeHead(200, headers);
+                sendFile(fd, 0, res);
+            });
+        });*/
+        fs.readFile(filename, function (err, data) {
+          if (err) {
+            message = "Error loading " + filename;
+            res.writeHead(404, { "Content-Type": "text/plain", "Content-Length": message.length });
+            console.log(message);
+            res.end(message);
+          } else {
+            if(req.headers.range) {
+                console.log(req.headers.range);
+                found = req.headers.range.match(/bytes=(\d*)-(\d*)/);
+                if(found) {
+                    var start = found[1];
+                    var end = found[2];
+                    if(start == "") {
+                        start = data.length - end;
+                    }
+                    if(end == "" || end > data.length - 1) {
+                        end = data.length - 1;
+                    }
+                    start = parseInt(start);
+                    end = parseInt(end) + 1; // offset by one
+                    headers = { "Content-Type": content_type
+                              , "Content-Length": end - start
+                              , "Accept-Ranges": "bytes"
+                              , "Content-Range": "bytes " + start + "-" + (end - 1) + "/" + data.length
+                              };
+                    console.log(headers["Content-Range"]);
+                    res.writeHead(206, headers); // partial content
+                    res.end(data.slice(start, end));
+                } else {
+                    notImplemented(req, res);
+                }
+            } else {
+                headers = { "Content-Type": content_type
+                          , "Content-Length": data.length
+                          };
+                if (!DEBUG) headers["Cache-Control"] = "public";
+                //console.log("document root file " + filename + " loaded");
+                res.writeHead(200, headers);
+                res.end(data);
+            }
+          }
+        });
+    } else {
+        message = "File not found: " + filename;
+        res.writeHead(404, {"Content-Type":"text/plain", "Content-Length": message.length });
+        console.log(message);
+        res.end(message);
+    }
+  });
+}
+
+fu.getPostData = function(callback) {
+    return function(req, res) {
+        if(req.method === "POST") {
+            console.log("building post_data");
+            req.post_data = String();
+            req.addListener("data", function(chunk) {
+                req.post_data += chunk;
+            });
+            req.addListener("end", function() {
+                callback(req, res);
+            });
+        } else {
+            callback(req, res);
+        }
+    }
+}
+
+fu.staticHandler = function (filename) {
+  var body, headers;
+  var content_type = fu.mime.lookupExtension(extname(filename));
+
+  function loadResponseData(callback) {
+    if (body && headers && !DEBUG) {
+      callback();
+      return;
+    }
+
+    console.log("loading " + filename + "...");
+    fs.readFile(filename, function (err, data) {
+      if (err) {
+        console.log("Error loading " + filename);
+      } else {
+        body = data;
+        headers = { "Content-Type": content_type
+                  , "Content-Length": body.length
+                  };
+        if (!DEBUG) headers["Cache-Control"] = "public";
+        console.log("static file " + filename + " loaded");
+        callback();
+      }
+    });
+  }
+
+  return function (req, res) {
+    loadResponseData(function () {
+      res.writeHead(200, headers);
+      res.end(req.method === "HEAD" ? "" : body);
+    });
+  }
+};
+
+// stolen from jack- thanks
+fu.mime = {
+  // returns MIME type for extension, or fallback, or octet-steam
+  lookupExtension : function(ext, fallback) {
+    return fu.mime.TYPES[ext.toLowerCase()] || fallback || 'application/octet-stream';
+  },
+
+  // List of most common mime-types, stolen from Rack.
+  TYPES : { ".3gp"   : "video/3gpp"
+          , ".a"     : "application/octet-stream"
+          , ".ai"    : "application/postscript"
+          , ".aif"   : "audio/x-aiff"
+          , ".aiff"  : "audio/x-aiff"
+          , ".asc"   : "application/pgp-signature"
+          , ".asf"   : "video/x-ms-asf"
+          , ".asm"   : "text/x-asm"
+          , ".asx"   : "video/x-ms-asf"
+          , ".atom"  : "application/atom+xml"
+          , ".au"    : "audio/basic"
+          , ".avi"   : "video/x-msvideo"
+          , ".bat"   : "application/x-msdownload"
+          , ".bin"   : "application/octet-stream"
+          , ".bmp"   : "image/bmp"
+          , ".bz2"   : "application/x-bzip2"
+          , ".c"     : "text/x-c"
+          , ".cab"   : "application/vnd.ms-cab-compressed"
+          , ".cc"    : "text/x-c"
+          , ".chm"   : "application/vnd.ms-htmlhelp"
+          , ".class"   : "application/octet-stream"
+          , ".com"   : "application/x-msdownload"
+          , ".conf"  : "text/plain"
+          , ".cpp"   : "text/x-c"
+          , ".crt"   : "application/x-x509-ca-cert"
+          , ".css"   : "text/css"
+          , ".csv"   : "text/csv"
+          , ".cxx"   : "text/x-c"
+          , ".deb"   : "application/x-debian-package"
+          , ".der"   : "application/x-x509-ca-cert"
+          , ".diff"  : "text/x-diff"
+          , ".djv"   : "image/vnd.djvu"
+          , ".djvu"  : "image/vnd.djvu"
+          , ".dll"   : "application/x-msdownload"
+          , ".dmg"   : "application/octet-stream"
+          , ".doc"   : "application/msword"
+          , ".dot"   : "application/msword"
+          , ".dtd"   : "application/xml-dtd"
+          , ".dvi"   : "application/x-dvi"
+          , ".ear"   : "application/java-archive"
+          , ".eml"   : "message/rfc822"
+          , ".eps"   : "application/postscript"
+          , ".exe"   : "application/x-msdownload"
+          , ".f"     : "text/x-fortran"
+          , ".f77"   : "text/x-fortran"
+          , ".f90"   : "text/x-fortran"
+          , ".flv"   : "video/x-flv"
+          , ".for"   : "text/x-fortran"
+          , ".gem"   : "application/octet-stream"
+          , ".gemspec" : "text/x-script.ruby"
+          , ".gif"   : "image/gif"
+          , ".gz"    : "application/x-gzip"
+          , ".h"     : "text/x-c"
+          , ".hh"    : "text/x-c"
+          , ".htm"   : "text/html"
+          , ".html"  : "text/html"
+          , ".ico"   : "image/vnd.microsoft.icon"
+          , ".ics"   : "text/calendar"
+          , ".ifb"   : "text/calendar"
+          , ".iso"   : "application/octet-stream"
+          , ".jar"   : "application/java-archive"
+          , ".java"  : "text/x-java-source"
+          , ".jnlp"  : "application/x-java-jnlp-file"
+          , ".jpeg"  : "image/jpeg"
+          , ".jpg"   : "image/jpeg"
+          , ".js"    : "application/javascript"
+          , ".json"  : "application/json"
+          , ".log"   : "text/plain"
+          , ".m3u"   : "audio/x-mpegurl"
+          , ".m4v"   : "video/mp4"
+          , ".man"   : "text/troff"
+          , ".mathml"  : "application/mathml+xml"
+          , ".mbox"  : "application/mbox"
+          , ".mdoc"  : "text/troff"
+          , ".me"    : "text/troff"
+          , ".mid"   : "audio/midi"
+          , ".midi"  : "audio/midi"
+          , ".mime"  : "message/rfc822"
+          , ".mml"   : "application/mathml+xml"
+          , ".mng"   : "video/x-mng"
+          , ".mov"   : "video/quicktime"
+          , ".mp3"   : "audio/mpeg"
+          , ".mp4"   : "video/mp4"
+          , ".mp4v"  : "video/mp4"
+          , ".mpeg"  : "video/mpeg"
+          , ".mpg"   : "video/mpeg"
+          , ".ms"    : "text/troff"
+          , ".msi"   : "application/x-msdownload"
+          , ".odp"   : "application/vnd.oasis.opendocument.presentation"
+          , ".ods"   : "application/vnd.oasis.opendocument.spreadsheet"
+          , ".odt"   : "application/vnd.oasis.opendocument.text"
+          , ".ogg"   : "application/ogg"
+          , ".p"     : "text/x-pascal"
+          , ".pas"   : "text/x-pascal"
+          , ".pbm"   : "image/x-portable-bitmap"
+          , ".pdf"   : "application/pdf"
+          , ".pem"   : "application/x-x509-ca-cert"
+          , ".pgm"   : "image/x-portable-graymap"
+          , ".pgp"   : "application/pgp-encrypted"
+          , ".pkg"   : "application/octet-stream"
+          , ".pl"    : "text/x-script.perl"
+          , ".pm"    : "text/x-script.perl-module"
+          , ".png"   : "image/png"
+          , ".pnm"   : "image/x-portable-anymap"
+          , ".ppm"   : "image/x-portable-pixmap"
+          , ".pps"   : "application/vnd.ms-powerpoint"
+          , ".ppt"   : "application/vnd.ms-powerpoint"
+          , ".ps"    : "application/postscript"
+          , ".psd"   : "image/vnd.adobe.photoshop"
+          , ".py"    : "text/x-script.python"
+          , ".qt"    : "video/quicktime"
+          , ".ra"    : "audio/x-pn-realaudio"
+          , ".rake"  : "text/x-script.ruby"
+          , ".ram"   : "audio/x-pn-realaudio"
+          , ".rar"   : "application/x-rar-compressed"
+          , ".rb"    : "text/x-script.ruby"
+          , ".rdf"   : "application/rdf+xml"
+          , ".roff"  : "text/troff"
+          , ".rpm"   : "application/x-redhat-package-manager"
+          , ".rss"   : "application/rss+xml"
+          , ".rtf"   : "application/rtf"
+          , ".ru"    : "text/x-script.ruby"
+          , ".s"     : "text/x-asm"
+          , ".sgm"   : "text/sgml"
+          , ".sgml"  : "text/sgml"
+          , ".sh"    : "application/x-sh"
+          , ".sig"   : "application/pgp-signature"
+          , ".snd"   : "audio/basic"
+          , ".so"    : "application/octet-stream"
+          , ".svg"   : "image/svg+xml"
+          , ".svgz"  : "image/svg+xml"
+          , ".swf"   : "application/x-shockwave-flash"
+          , ".t"     : "text/troff"
+          , ".tar"   : "application/x-tar"
+          , ".tbz"   : "application/x-bzip-compressed-tar"
+          , ".tcl"   : "application/x-tcl"
+          , ".tex"   : "application/x-tex"
+          , ".texi"  : "application/x-texinfo"
+          , ".texinfo" : "application/x-texinfo"
+          , ".text"  : "text/plain"
+          , ".tif"   : "image/tiff"
+          , ".tiff"  : "image/tiff"
+          , ".torrent" : "application/x-bittorrent"
+          , ".tr"    : "text/troff"
+          , ".txt"   : "text/plain"
+          , ".vcf"   : "text/x-vcard"
+          , ".vcs"   : "text/x-vcalendar"
+          , ".vrml"  : "model/vrml"
+          , ".war"   : "application/java-archive"
+          , ".wav"   : "audio/x-wav"
+          , ".wma"   : "audio/x-ms-wma"
+          , ".wmv"   : "video/x-ms-wmv"
+          , ".wmx"   : "video/x-ms-wmx"
+          , ".wrl"   : "model/vrml"
+          , ".wsdl"  : "application/wsdl+xml"
+          , ".xbm"   : "image/x-xbitmap"
+          , ".xhtml"   : "application/xhtml+xml"
+          , ".xls"   : "application/vnd.ms-excel"
+          , ".xml"   : "application/xml"
+          , ".xpm"   : "image/x-xpixmap"
+          , ".xsl"   : "application/xml"
+          , ".xslt"  : "application/xslt+xml"
+          , ".yaml"  : "text/yaml"
+          , ".yml"   : "text/yaml"
+          , ".zip"   : "application/zip"
+          }
+};
+
+// upload support inspired by http://github.com/vgrichina/file-upload/tree/second_article
+var multipart = require("./multipart");
+
+function parse_multipart(req) {
+    var parser = multipart.parser();
+
+    // Make parser use parsed request headers
+    parser.headers = req.headers;
+
+    // Add listeners to request, transfering data to parser
+
+    req.addListener("data", function(chunk) {
+        parser.write(chunk);
+    });
+
+    req.addListener("end", function() {
+        parser.close();
+    });
+
+    return parser;
+}
+
+fu.uploadFileHandler = function(req, res) {
+    sys.debug("upload!!!");
+    // Request body is binary
+    //req.setEncoding("binary");
+
+    // Handle request as multipart
+    var stream = parse_multipart(req);
+
+    var fileName = null;
+    var fileStream = null;
+
+    // Set handler for a request part received
+    stream.onPartBegin = function(part) {
+        sys.debug("Started part, name = " + part.name + ", filename = " + part.filename);
+     
+        // Construct file name
+        fileName = "./uploads/" + stream.part.filename;
+
+        // Construct stream used to write to file
+        fileStream = fs.createWriteStream(fileName, { 'flags': 'w' } );
+
+        // Add error handler
+        fileStream.addListener("error", function(err) {
+            sys.debug("Got error while writing to file '" + fileName + "': ", err);
+        });
+
+        // Add drain (all queued data written) handler to resume receiving request data
+        fileStream.addListener("drain", function() {
+            req.resume();
+        });
+    };
+
+    // Set handler for a request part body chunk received
+    stream.onData = function(chunk) {
+        // Pause receiving request data (until current chunk is written)
+        req.pause();
+
+        // Write chunk to file
+        //sys.debug("Writing chunk");
+        fileStream.write(chunk);
+    };
+
+    // Set handler for request completed
+    stream.onEnd = function() {
+        // As this is after request completed, all writes should have been queued by now
+        // So following callback will be executed after all the data is written out
+        fileStream.addListener("drain", function() {
+            // Close file stream
+            fileStream.end();
+            // Handle request completion, as all chunks were already written
+            upload_complete(res);
+        });
+    };
+}
+
+function upload_complete(res) {
+    sys.debug("Request complete");
+
+    // Render response
+    res.writeHead(200, {"Content-Type": "text/plain"});
+    res.end("Uploaded successfully!");
+
+    console.log("\n=> Done");
+}
+

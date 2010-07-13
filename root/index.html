@@ -1,0 +1,107 @@
+<html lang="en"><head>
+		<meta http-equiv="Content-Type" content="text/html; charset=iso-8859-1" />
+		<title>Transcript correction</title>
+		<link type="text/css" href="css/ui-lightness/jquery-ui-1.8.1.custom.css" rel="stylesheet" />	
+		<script type="text/javascript" src="js/jquery-1.4.2.min.js"></script>
+		<script type="text/javascript" src="js/jquery-ui-1.8.1.custom.min.js"></script>
+		<script type="text/javascript" src="client.js"></script>
+    <style type="text/css">
+    .message {
+        color:red;
+    }
+    #toolbar {
+        padding: 15px 15px;
+        position: fixed;
+        left:50%;
+        top:-10;
+        width:800px;
+        background-color: #ffcc33;
+        border-radius:5px;
+        -moz-border-radius:5px;
+        -webkit-border-radius:5px;
+        margin-left:-420px;
+        z-index:1;
+        box-shadow: 2px 2px 8px #aaa;
+        -moz-box-shadow: 2px 2px 8px #aaa;
+        -webkit-box-shadow: 2px 2px 8px #aaa;
+    }
+	body { font: 62.5% "Trebuchet MS", sans-serif; color:black; background-color:white;}
+    #slider {width:100%;margin-top:10px;display:inline-block;margin-bottom:10px;}
+    sentence {display:block; width:80%; text-align:left; border:1px solid #ccc;padding:20px; border-radius:10px;-moz-border-radius:10px;-webkit-border-radius:10px;margin-top:10px;font-size:130%; background-color:white;}
+    placeholder {display: block;padding:10px; }
+    sentence.clickable:hover { 
+        border: 1px solid white;
+        box-shadow: inset 2px 2px 10px #bbb;
+        -moz-box-shadow: inset 2px 2px 10px #bbb;
+        -webkit-box-shadow: inset 2px 2px 10px #bbb;
+        padding-top: 23px;
+        padding-bottom: 17px;
+        padding-left: 23px;
+    }
+    sentence.selected {
+        border: 1px solid white;
+        box-shadow: inset 2px 2px 10px #bbb;
+        -moz-box-shadow: inset 2px 2px 10px #bbb;
+        -webkit-box-shadow: inset 2px 2px 10px #bbb;
+        padding-top: 23px;
+        padding-bottom: 17px;
+        padding-left: 23px;
+    }
+
+    lattice {display:block;margin-bottom:20px;margin-top:-5px;}
+    wordlist {display:inline-block; vertical-align:top; background-color: #eeeeee; border: 1px solid  #eeeeee; border-radius:3px; -moz-border-radius:3px; -webkit-border-radius:3px; margin:1px; margin-top:20px;min-width:30px;}
+    word {display:inline-block; background-color: #ffffff; margin:2px; border-radius:3px;-moz-border-radius:3px;-webkit-border-radius:3px; padding:3px; padding-left:6px; padding-right:6px; border: 1px solid white;cursor:default;}
+    word.selected {border: 1px solid blue;}
+    word.unmodified {border: 1px solid blue; }
+    wordlist.selected {border: 1px solid #aaaaaa;background-color:#dddddd;}
+    wordlist.anchor {background-color:#ccb;border-color:#ccb;text-align:center;font-weight:bold;padding-left:3px;padding-right:3px;padding-top:5px;}
+    wordlist.anchor.selected {border: 1px solid #775;background-color:#aa9;}
+    input.editing {border: 1px solid black; border-radius:3px;-moz-border-radius:3px; -webkit-border-radius:3px; padding:3px; padding-left:6px; padding-right:6px;margin: 2px;}
+    #icons {display:block; visibility:hidden;position:absolute;}
+    #edition-icons {display:block; visibility:hidden;position:absolute;}
+    icon {float:left;}
+    icon:hover {background-color:#eeeeee;border-radius:3px;-moz-border-radius:3px;-webkit-border-radius:3px;}
+    semannotation { display:inline; padding-left: 2px; padding-right:2px; background-color: LightSkyBlue;  border-radius:2px;-moz-border-radius:2px;-webkit-border-radius:2px; }
+    #spectrogram {
+        margin-top:10px;
+        display:none;
+    }
+    .last_modified {
+        color:gray;
+        font-size:70%;
+        float:right;
+    }
+    </style>
+</head>
+<body>
+<div>
+<span id="toolbar" class="ui-widget ui-corner-all">
+        <button id="play">Play (Space)</button>
+        <button id="pause">Pause (Space)</button>
+        
+        <label for="amount">Time: </label>
+        <input size="5" type="text" id="time" style="border:0; font-weight:bold; background:none;" value="loading"/>
+        Dialog: <select id="showname"></select>
+        <!--<button id="revert">Revert</button>
+        <button id="save">Save</button>
+        <button id="previous">Previous</button><button id="next">Next</button>-->
+        (<a href="upload.html" target="_manager">manage</a>) 
+        <div style="float:right">
+        <button id="undo">Undo (Ctrl-z)</button><button id="redo">Redo (Ctrl-Shift-z)</button>
+        </div>
+        <div id="slider"></div>
+        <audio id="player"></audio>
+        <a href="#" id="show_spectrogram">Show/hide spectrogram</a>
+        <iframe name="spectrogram" id="spectrogram" src="spectrogram/33.html" frameborder="0" width="800"></iframe>
+</span>
+</div>
+<center>
+<div style="margin-top:110px"></div>
+<div id="sentences"></div>
+<div id="icons"><icon class="delete wordlist-icon" title="Delete selected (Delete)"></icon><icon class="edit wordlist-icon" title="Edit selected (Enter)"></icon><icon class="insert wordlist-icon" title="Insert after (Ctrl-Space)"></icon>
+<icon class="cancel edition-icon" title="Cancel edition (Esc)"></icon><icon class="save edition-icon" title="Save new text (Enter)"></icon></div>
+<p>TODO: autoresize text field, undo/redo buttons, filter html in text field, interactions with server.</p>
+<p>Video <a href="transcript-correction2.avi">demo</a>.</p>
+</center>
+</body>
+</html>
