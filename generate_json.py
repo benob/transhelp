@@ -11,9 +11,16 @@ for dialog in sorted(dialogs, lambda x, y: cmp(int(x), int(y))):
     dialogs[dialog].sort(lambda x, y: cmp(x[1], y[1]))
     print '{'
     print '"name":"%s",' % dialog
+    print '"original_audio":"uploads/%s.wav",' % dialog
+    print '"asr_status":"processed",'
+    print '"asr_log":"none",'
+    print '"group":"media1-test",'
+    print '"transcript_status":"unmodified",'
+    #print '"uploaded":"offline",' # generated automatically by server
+    print '"shown":"true",'
     print '"audio":["audio/%s.ogg", "audio/%s.mp3"],' % (dialog, dialog)
     png_files = [[x, int(x.split('-')[-1].split('.')[0])] 
-        for x in commands.getoutput("find spectrogram/%s -name '*.png'" % dialog).split('\n')]
+        for x in commands.getoutput("find ../spectrogram/%s -name '*.png'" % dialog).split('\n')]
     png_files.sort(lambda x, y: cmp(x[1], y[1]))
     print '"spectrograms":["' + '", "'.join([x[0] for x in png_files]) + '"],'
     print '"segments":['
@@ -33,6 +40,7 @@ for dialog in sorted(dialogs, lambda x, y: cmp(int(x), int(y))):
         print '"start":"%.2f",' % start
         print '"end":"%.2f",' % end
         print '"speaker":"%s",' % speaker
+        print '"modified":"unmodified",'
         print '"wordlists":['
         words = []
         text = []

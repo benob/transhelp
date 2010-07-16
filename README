@@ -24,7 +24,5 @@ dialogs: [
     }
 ]
 
-cd ..
-python node/generate_json.py latMEDIA1_2010_JUIN/*/*saus > node/data/MEDIA1_2010_JUIN.json
-cd node
+python generate_json.py ../latMEDIA1_2010_JUIN/*/*saus > data/MEDIA1_2010_JUIN.json
 iconv -f latin1 -t utf8 data/MEDIA1_2010_JUIN.json > data/db.json

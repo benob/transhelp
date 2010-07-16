@@ -414,6 +414,8 @@ $(function() {
                     $("icon.edition-icon").hide();
                     $("icon.wordlist-icon").show();
                     selectionChanged();
+                    event.preventDefault();
+                    return false;
                 } else if(event.keyCode == 13 || event.keyCode == 9) { // enter or tab
                     var value = $.trim($(this).val());
                     var previous = $(this).parents('wordlist').prev(":visible:not(.editing)");
@@ -578,9 +580,29 @@ $(function() {
             }
         });
         $(window).unbind("keydown");
-        $(window).keydown(function(event) {
+        $(window).keydown(function(event) { // metaKey does not recieve keypress events
             if($("wordlist input").length == 0) {
-                var character = String.fromCharCode(event.keyCode);
+                if(event.metaKey && event.keyCode == 90) { // ctrl-z (undo)
+                    if(event.shiftKey) {
+                        if(redoActions.length > 0) $("#redo").click();
+                    } else {
+                        if(undoActions.length > 0) $("#undo").click();
+                    }
+                // deactivated direct editing, must use enter or space
+                /*} else if(character.match(/(\w|\d)/)) { // is a unicode letter?
+                    $("icon.edit").click();
+                    $("wordlist input").trigger("keydown", event);*/
+                } else if(event.metaKey && event.keyCode == 65) { // ctrl-a (select all)
+                    $("wordlist").addClass("selected");
+                }
+                event.preventDefault();
+                return false;
+            }
+        });
+        $(window).unbind("keypress");
+        $(window).keypress(function(event) {
+            if($("wordlist input").length == 0) {
+                //var character = String.fromCharCode(event.keyCode);
                 if(event.keyCode == 46) { // delete
                     $("icon.delete").click();
                 } else if(event.keyCode == 32) { // space
@@ -591,12 +613,8 @@ $(function() {
                         if(player.paused) player.play();
                         else player.pause();
                     }
-                    event.preventDefault();
-                    return false;
                 } else if(event.keyCode == 13) { // enter
                     $("icon.edit").click();
-                    event.preventDefault();
-                    return false;
                 } else if(event.keyCode == 38 || event.keyCode == 40) { // up or down
                     var current = $("wordlist.selected");
                     if(current.length == 1) {
@@ -613,8 +631,10 @@ $(function() {
                             if(found.length == 1) $(found).addClass('selected');
                             else $(word).addClass('selected');
                         }
+                        event.preventDefault();
+                        return false;
                     }
-                } else if(event.keyCode == 9 || event.keyCode == 37 || event.keyCode == 39) { // tab or left or right
+                } else if(event.keyCode == 9 || event.keyCode == 37 || event.keyCode == 39 || event.keyCode == 36 || event.keyCode == 35) { // tab or left or right or home or end
                     var selected = $("wordlist.selected");
                     if(selected.length > 0) {
                         if((event.keyCode == 9 && event.shiftKey) || event.keyCode == 37) { // shift-tab or left
@@ -627,30 +647,44 @@ $(function() {
                                 if(!(event.keyCode == 39 && event.shiftKey)) $(selected).removeClass("selected");
                                 $(selected[selected.length - 1].nextSibling).addClass("selected");
                             }
+                        } else if(event.keyCode == 36) { // home
+                            $(selected).removeClass("selected");
+                            if(event.shiftKey) {
+                                $("wordlist").filter(function() {
+                                    return $(this).index() <= $(selected).first().index();
+                                }).addClass("selected");
+                            }
+                            $("wordlist").first().addClass("selected");
+                        } else if(event.keyCode == 35) { // end
+                            $(selected).removeClass("selected");
+                            if(event.shiftKey) {
+                                $("wordlist").filter(function() {
+                                    return $(this).index() >= $(selected).last().index();
+                                }).addClass("selected");
+                            }
+                            $("wordlist").last().addClass("selected");
                         }
                     } else {
-                        $("wordlist")[0].addClass("selected");
+                        if(event.keyCode == 35) {
+                            $("wordlist").last().addClass("selected");
+                        } else {
+                            $("wordlist").first().addClass("selected");
+                        }
                     }
                     if($("wordlist.selected").length > 0) {
                         var player = $("#player")[0];
                         player.currentTime = 1.0 * $("wordlist.selected")[0].backend.start;
                     }
-                    selectionChanged();
-                    event.preventDefault();
-                    return false;
                 } else if(event.keyCode == 16) { // shift
                     selectionStart = $("wordlist.selected");
-                } else if(event.metaKey && event.keyCode == 90) { // ctrl-z (undo)
-                    if(event.shiftKey) {
-                        if(redoActions.length > 0) $("#redo").click();
-                    } else {
-                        if(undoActions.length > 0) $("#undo").click();
-                    }
-                // deactivated direct editing, must use enter or space
-                /*} else if(character.match(/(\w|\d)/)) { // is a unicode letter?
-                    $("icon.edit").click();
-                    $("wordlist input").trigger("keydown", event);*/
+                } else if(event.keyCode == 27) { // escape unselect
+                    $("wordlist").removeClass("selected");
+                } else {
+                    return true; // process the key
                 }
+                selectionChanged();
+                event.preventDefault();
+                return false;
             } else {
             }
         });

@@ -98,35 +98,11 @@ function extname (path) {
   return index < 0 ? "" : path.substring(index);
 }
 
-function sendFile(fd, position, res) {
-    Buffer = require('buffer').Buffer;
-    buf = new Buffer(4096);
-    fs.read(fd, buffer, 0 , 4096, position, function(err, byteRead) {
-        if(byteRead == 0) {
-            res.end();
-            fs.close(fd);
-        } else {
-            res.write(buffer);
-            sendFile(fd, position + byteRead, res);
-        }
-    });
-}
-
 function documentRootHandler(req, res) {
   var filename = fu.documentRoot + url.parse(req.url).pathname;
   path.exists(filename, function(exists) {
     if(exists) {
         var content_type = fu.mime.lookupExtension(extname(filename));
-        //console.log("loading " + filename + "...");
-        /*fs.open(filename, "r", function(err, fd) {
-            fs.stat(filename, function(err, stat) {
-                headers = { "Content-Type": content_type
-                          , "Content-Length": stats.size
-                          };
-                res.writeHead(200, headers);
-                sendFile(fd, 0, res);
-            });
-        });*/
         fs.readFile(filename, function (err, data) {
           if (err) {
             message = "Error loading " + filename;
@@ -405,91 +381,4 @@ fu.mime = {
           , ".zip"   : "application/zip"
           }
 };
-
-// upload support inspired by http://github.com/vgrichina/file-upload/tree/second_article
-var multipart = require("./multipart");
-
-function parse_multipart(req) {
-    var parser = multipart.parser();
-
-    // Make parser use parsed request headers
-    parser.headers = req.headers;
-
-    // Add listeners to request, transfering data to parser
-
-    req.addListener("data", function(chunk) {
-        parser.write(chunk);
-    });
-
-    req.addListener("end", function() {
-        parser.close();
-    });
-
-    return parser;
-}
-
-fu.uploadFileHandler = function(req, res) {
-    sys.debug("upload!!!");
-    // Request body is binary
-    //req.setEncoding("binary");
-
-    // Handle request as multipart
-    var stream = parse_multipart(req);
-
-    var fileName = null;
-    var fileStream = null;
-
-    // Set handler for a request part received
-    stream.onPartBegin = function(part) {
-        sys.debug("Started part, name = " + part.name + ", filename = " + part.filename);
-     
-        // Construct file name
-        fileName = "./uploads/" + stream.part.filename;
-
-        // Construct stream used to write to file
-        fileStream = fs.createWriteStream(fileName, { 'flags': 'w' } );
-
-        // Add error handler
-        fileStream.addListener("error", function(err) {
-            sys.debug("Got error while writing to file '" + fileName + "': ", err);
-        });
-
-        // Add drain (all queued data written) handler to resume receiving request data
-        fileStream.addListener("drain", function() {
-            req.resume();
-        });
-    };
-
-    // Set handler for a request part body chunk received
-    stream.onData = function(chunk) {
-        // Pause receiving request data (until current chunk is written)
-        req.pause();
-
-        // Write chunk to file
-        //sys.debug("Writing chunk");
-        fileStream.write(chunk);
-    };
-
-    // Set handler for request completed
-    stream.onEnd = function() {
-        // As this is after request completed, all writes should have been queued by now
-        // So following callback will be executed after all the data is written out
-        fileStream.addListener("drain", function() {
-            // Close file stream
-            fileStream.end();
-            // Handle request completion, as all chunks were already written
-            upload_complete(res);
-        });
-    };
-}
-
-function upload_complete(res) {
-    sys.debug("Request complete");
-
-    // Render response
-    res.writeHead(200, {"Content-Type": "text/plain"});
-    res.end("Uploaded successfully!");
-
-    console.log("\n=> Done");
-}
 
