@@ -20,7 +20,7 @@ for dialog in sorted(dialogs, lambda x, y: cmp(int(x), int(y))):
     print '"shown":"true",'
     print '"audio":["audio/%s.ogg", "audio/%s.mp3"],' % (dialog, dialog)
     png_files = [[x, int(x.split('-')[-1].split('.')[0])] 
-        for x in commands.getoutput("find ../spectrogram/%s -name '*.png'" % dialog).split('\n')]
+        for x in commands.getoutput("find root/spectrogram/%s -name '*.png' | sed 's/root\///'" % dialog).split('\n')]
     png_files.sort(lambda x, y: cmp(x[1], y[1]))
     print '"spectrograms":["' + '", "'.join([x[0] for x in png_files]) + '"],'
     print '"segments":['
@@ -36,7 +36,7 @@ for dialog in sorted(dialogs, lambda x, y: cmp(int(x), int(y))):
             speaker = result.group(4)
         print '{'
         print '"name":"%s",' % filename
-        print '"dialog":%s,' % dialog
+        print '"dialog":"%s",' % dialog
         print '"start":"%.2f",' % start
         print '"end":"%.2f",' % end
         print '"speaker":"%s",' % speaker

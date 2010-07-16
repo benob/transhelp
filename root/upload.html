@@ -99,8 +99,17 @@ function action(type) {
                 } else {
                     list_files();
                 }
-                //$("#message").html(data.message).show();;
-                //$("#message").show().delay(3000).fadeout();
+            });
+        }
+    } else if(type == "reprocess") {
+        var selection = $("input.select[checked!=false]").parents("tr").find(".name").get();
+        if(confirm("Do you really want to reprocess " + selection.length + " files?")) {
+            $.post("/reprocess_dialog", JSON.stringify(selection.map(function(item){return $(item).html();})), function(data) {
+                if(data.error == "failed") {
+                    console.log(data);
+                } else {
+                    list_files();
+                }
             });
         }
     }
@@ -136,6 +145,7 @@ Channels: <input name="channels" type="radio" checked title="Left: wizard / Righ
     </p>
     Selection: <a href="javascript:select('all')">all</a>, <a href="javascript:select('none')">none</a>, <a href="javascript:select('reverse')">reverse</a>
     Action: <a href="javascript:action('delete')">delete</a>
+    <a href="javascript:action('reprocess')">reprocess</a>
     <table id="file_list" cellspacing="1px">
     <thead>
         <tr>

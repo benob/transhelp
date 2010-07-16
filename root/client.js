@@ -579,8 +579,8 @@ $(function() {
                 return false;
             }
         });
-        $(window).unbind("keydown");
-        $(window).keydown(function(event) { // metaKey does not recieve keypress events
+        //$(window).unbind("keydown");
+        /*$(window).keydown(function(event) { // metaKey does not recieve keypress events
             if($("wordlist input").length == 0) {
                 if(event.metaKey && event.keyCode == 90) { // ctrl-z (undo)
                     if(event.shiftKey) {
@@ -588,19 +588,15 @@ $(function() {
                     } else {
                         if(undoActions.length > 0) $("#undo").click();
                     }
-                // deactivated direct editing, must use enter or space
-                /*} else if(character.match(/(\w|\d)/)) { // is a unicode letter?
-                    $("icon.edit").click();
-                    $("wordlist input").trigger("keydown", event);*/
                 } else if(event.metaKey && event.keyCode == 65) { // ctrl-a (select all)
                     $("wordlist").addClass("selected");
                 }
                 event.preventDefault();
                 return false;
             }
-        });
-        $(window).unbind("keypress");
-        $(window).keypress(function(event) {
+        });*/
+        $(window).unbind("keydown");
+        $(window).keydown(function(event) {
             if($("wordlist input").length == 0) {
                 //var character = String.fromCharCode(event.keyCode);
                 if(event.keyCode == 46) { // delete
@@ -679,6 +675,18 @@ $(function() {
                     selectionStart = $("wordlist.selected");
                 } else if(event.keyCode == 27) { // escape unselect
                     $("wordlist").removeClass("selected");
+                } else if(event.metaKey && event.keyCode == 90) { // ctrl-z (undo)
+                    if(event.shiftKey) {
+                        if(redoActions.length > 0) $("#redo").click();
+                    } else {
+                        if(undoActions.length > 0) $("#undo").click();
+                    }
+                // deactivated direct editing, must use enter or space
+                /*} else if(character.match(/(\w|\d)/)) { // is a unicode letter?
+                    $("icon.edit").click();
+                    $("wordlist input").trigger("keydown", event);*/
+                } else if(event.metaKey && event.keyCode == 65) { // ctrl-a (select all)
+                    $("wordlist").addClass("selected");
                 } else {
                     return true; // process the key
                 }

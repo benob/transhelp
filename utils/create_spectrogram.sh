@@ -19,6 +19,6 @@ montage -geometry +0+0 -tile 1x2 $tmp.r.png $tmp.l.png -colors 64 -strip $tmp.pn
 mkdir -p $output
 convert $tmp.png -crop 1024x0 +repage +adjoin $output/$2-%d.png
 find $output -name '*.png' | sort -t- -k2 -n \
-    | awk 'BEGIN{print "{\"images\":["}{print "\"'$3'" $0 "\","}END{print "]}"}' \
+    | awk 'BEGIN{print "{\"images\":["}{print "\"spectrograms/" $0 "\","}END{print "]}"}' \
     | python $dir/spectrogram_json2html.py > $output.html
 rm $tmp.r.wav $tmp.l.wav $tmp.r.png $tmp.l.png $tmp.png

@@ -16,12 +16,14 @@ console.log = function(text) {
 
 // while we don't have proper serialization:
 dbFile = "data/db.json";
+
 console.log("reading db from " + dbFile + "...");
 data = fs.readFileSync(dbFile);
 data = String(data).replace(/\n/g, ' ').replace(/,\s*\]/g, "]").replace(/,\s*\}/g, "}");
 var content = JSON.parse(data);
 var dialogs = {};
 var segments = {};
+var processingList = JSON.parse(String(fs.readFileSync(dbFile + ".processingList")).replace(/\n/g, ''));
 var modified = false;
 
 for(var i = 0; i < content.length; i++) {
@@ -36,20 +38,85 @@ for(var i = 0; i < content.length; i++) {
 }
 console.log("done");
 
-function saveDB() {
-    if(modified) {
-        console.log("saving db to " + dbFile + "...");
-        fs.writeFileSync(dbFile, JSON.stringify(content));
-        console.log("done");
+function saveDB(force) {
+    if(modified || force) {
         modified = false;
+        if(force) {
+            fs.writeFileSync(dbFile, JSON.stringify(content));
+            console.log("saved db to " + dbFile);
+            fs.writeFileSync(dbFile + ".processingList", JSON.stringify(processingList));
+            console.log("saved db to " + dbFile + ".processingList");
+        } else {
+            fs.writeFile(dbFile, JSON.stringify(content), function(error) {
+                if(error) {
+                    console.log("ERROR while saving db to " + dbFile + ": " + error);
+                } else {
+                    console.log("saved db to " + dbFile);
+                }
+            });
+            fs.writeFile(dbFile + ".processingList", JSON.stringify(processingList), function(error) {
+                if(error) {
+                    console.log("ERROR while saving db to " + dbFile + ".processingList" + ": " + error);
+                } else {
+                    console.log("saved db to " + dbFile + ".processingList");
+                }
+            });
+        }
     }
 }
 
-process.addListener('SIGINT', function() {saveDB(); process.exit();} );
-process.addListener('SIGTERM', function() {saveDB(); process.exit();} );
+process.addListener('SIGINT', function() {saveDB(true); process.exit();} );
+process.addListener('SIGTERM', function() {saveDB(true); process.exit();} );
 setInterval(saveDB, 60000);
 
-//fu.basicAuth = "portmedia:portmedia@lium";
+// process next item in queue
+function processQueue() {
+    if(processingList.length > 0) {
+        var name = processingList.shift();
+        modified = true;
+        var dialog = dialogs[name];
+        if(dialog != undefined) { // && dialog.asr_status.match(/^waiting/)) {
+            dialog.asr_status = "running " + String(Date());
+            console.log("QUEUE: processing " + dialog.original_audio);
+            exec("utils/process_dialog.sh " + dialog.original_audio, function(error, stdout, stderr) {
+                if(error) {
+                    dialog.asr_status = "failed " + String(Date());
+                    console.log("QUEUE: failed " + dialog.original_audio + " error=" + error);
+                } else {
+                    console.log("QUEUE: success " + dialog.original_audio);
+                    fs.readFile(dialog.original_audio + ".json", function(error, data) {
+                        data = String(data).replace(/\n/g, ' ').replace(/,\s*\]/g, "]").replace(/,\s*\}/g, "}");
+                        var processed = JSON.parse(data)[0];
+                        console.log(sys.inspect(processed));
+                        dialog.asr_status = "processed " + String(Date());
+                        dialog.segments = processed.segments;
+                        // update segment index
+                        dialog.segments.map(function(segment) {
+                            segments[segment.name] = segment;
+                        });
+                        dialog.spectrograms = processed.spectrograms;
+                        dialog.audio = processed.audio;
+                        dialog.transcript_status = "unmodified";
+                        console.log(JSON.stringify(dialog));
+                    });
+                }
+                console.log(stdout);
+                console.log(stderr);
+            });
+        } else {
+            console.log("QUEUE: item '" + name + "' not found");
+            processQueue();
+        }
+    } else {
+        //console.log("QUEUE: nothing to do");
+        setTimeout(processQueue, 5000);
+    }
+}
+
+// init queue loop
+processQueue();
+
+//fu.basicAuth = "user:password";
 fu.listen(PORT, HOST);
 
 fu.get("/", fu.staticHandler("./root/index.html"));
@@ -163,6 +230,7 @@ fu.get("/upload", function(req, res) {
                                 content.push(dialog);
                             }
                             dialogs[name] = dialog;
+                            processingList.push(name);
                             modified = true;
                             res.send_output(false, "Upload successful");
                         } else {
@@ -205,4 +273,13 @@ fu.get("/delete_dialog", fu.getPostData(function(req, res) {
         }
         res.simpleJSON(200, {error:"success", message:"Deleted " + list.length + " dialogs.", elements:list, indexes:indexes});
     }
+}));
+
+fu.get("/reprocess_dialog", fu.getPostData(function(req, res) {
+    var list = JSON.parse(req.post_data);
+    processingList = processingList.concat(list);
+    console.log("LIST: " + JSON.stringify(processingList));
+    modified = true;
+    list.map(function(element) { dialogs[element].asr_status = "waiting"; });
+    res.simpleJSON(200, {error:"success", message:"Queued for reprocessing", elements:list});
 }));
