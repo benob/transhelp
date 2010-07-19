@@ -71,17 +71,21 @@ setInterval(saveDB, 60000);
 
 // process next item in queue
 function processQueue() {
+    console.log("processQueue");
     if(processingList.length > 0) {
         var name = processingList.shift();
         modified = true;
         var dialog = dialogs[name];
         if(dialog != undefined) { // && dialog.asr_status.match(/^waiting/)) {
             dialog.asr_status = "running " + String(Date());
+            sendMessage("update_dialog", dialog);
             console.log("QUEUE: processing " + dialog.original_audio);
             exec("utils/process_dialog.sh " + dialog.original_audio, function(error, stdout, stderr) {
                 if(error) {
                     dialog.asr_status = "failed " + String(Date());
+                    sendMessage("update_dialog", dialog);
                     console.log("QUEUE: failed " + dialog.original_audio + " error=" + error);
+                    processQueue();
                 } else {
                     console.log("QUEUE: success " + dialog.original_audio);
                     fs.readFile(dialog.original_audio + ".json", function(error, data) {
@@ -98,6 +102,8 @@ function processQueue() {
                         dialog.audio = processed.audio;
                         dialog.transcript_status = "unmodified";
                         console.log(JSON.stringify(dialog));
+                        sendMessage("update_dialog", dialog);
+                        processQueue();
                     });
                 }
                 console.log(stdout);
@@ -209,7 +215,6 @@ fu.get("/upload", function(req, res) {
                     // note that rename(2) does not work across filesystems
                     exec("mv " + source + " " + destination, function(error, stdout, stderr) {
                         if(!error) {
-                            // TODO: queue ASR from here
                             var dialog = {
                                 group: fields["group"],
                                 name: name,
@@ -282,4 +287,53 @@ fu.get("/reprocess_dialog", fu.getPostData(function(req, res) {
     modified = true;
     list.map(function(element) { dialogs[element].asr_status = "waiting"; });
     res.simpleJSON(200, {error:"success", message:"Queued for reprocessing", elements:list});
+    list.forEach(function(element) { sendMessage("update_dialog", dialogs[element]); });
 }));
+
+fu.get("/refresh", fu.getPostData(function(req, res) {
+    var list = JSON.parse(req.post_data);
+    console.log("refresh " + JSON.stringify(list));
+    setTimeout(function() {
+        list.forEach(function(element) {
+            sendMessage("refresh", dialogs[element]);
+        });
+    }, 3000);
+    res.end();
+}));
+
+// long polling handler
+var requests = []
+fu.get("/poll", function(req, res) {
+   requests.push({
+       response: res,
+       timestamp: new Date().getTime()
+   });
+});
+
+setInterval(function() {
+    // close out requests older than 30 seconds
+    var expiration = new Date().getTime() - 30000;
+    var response;
+    requests = requests.filter(function(request) {
+        if (request.timestamp < expiration) {
+            response = request.response;
+            response.simpleJSON(200, {error: "timeout"});
+            console.log("timeout");
+            return false;
+        }
+        return true;
+    });
+}, 1000);
+
+function sendMessage(type, payload) {
+    if(requests && requests.length > 0) {
+        for(var i = 0; i < requests.length; i++) {
+            requests[i].response.simpleJSON(200, {message:type, payload:payload});
+        }
+        requests = [];
+    } else {
+    //    // queue for later use?
+        setTimeout(function() { sendMessage(type, payload); }, 1000);
+        console.log("missed message");
+    }
+}

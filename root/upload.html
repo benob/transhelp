@@ -3,8 +3,14 @@
 <title>Audio transcript manager</title>
 <link rel="stylesheet" href="js/style.css" type="text/css" />
 <script type="text/javascript" src="js/jquery-1.4.2.min.js"></script>
+<link type="text/css" href="css/ui-lightness/jquery-ui-1.8.1.custom.css" rel="stylesheet" />	
+<script type="text/javascript" src="js/jquery-ui-1.8.1.custom.min.js"></script>
 <script type="text/javascript" src="js/jquery.tablesorter.min.js"></script> 
+<script type="text/javascript" src="longpoll.js"></script>
 <script type="text/javascript">
+if(console == undefined) {
+    console = { log: function() {} };
+}
 function startUpload(){
     $('#f1_upload_process').show();
     $("#wait").show();
@@ -97,7 +103,9 @@ function action(type) {
                 if(data.error == "failed") {
                     console.log(data);
                 } else {
-                    list_files();
+                    $("input.select[checked!=false]").parents("tr").fadeOut(function() {
+                        $(this).remove();
+                    });
                 }
             });
         }
@@ -108,13 +116,32 @@ function action(type) {
                 if(data.error == "failed") {
                     console.log(data);
                 } else {
-                    list_files();
+                    //list_files();
                 }
             });
         }
+    } else if(type == "refresh") {
+        var selection = $("input.select[checked!=false]").parents("tr").find(".name").get();
+        $.post("/refresh", JSON.stringify(selection.map(function(item){return $(item).html();})));
     }
 }
 
+var longpoll = new LongPoll("/poll");
+$(function() {
+    longpoll.on("update_dialog", function(event) {
+        console.log(event.payload);
+        var row = $('#file_list').find('td.name')
+            .filter(function() { return $(this).html() == event.payload.name }).parent();
+        console.log(row);
+        var fields = ['select', 'group', 'name', 'original_audio', 'asr_status', 'transcript_status', 'uploaded', 'num_segments'];
+        for(var i = 0; i < fields.length; i++) {
+            $(row).find('td.' + fields[i]).html(event.payload[fields[i]]);
+        }
+        row.find('td')
+            .css({backgroundColor: 'yellow'}).delay(300)
+            .animate({backgroundColor: 'white'});
+    });
+});
 </script>
 <style type="text/css">
 #f1_upload_process{
@@ -144,8 +171,9 @@ Channels: <input name="channels" type="radio" checked title="Left: wizard / Righ
     List of audio files (<a href="javascript:list_files()">refresh</a>):
     </p>
     Selection: <a href="javascript:select('all')">all</a>, <a href="javascript:select('none')">none</a>, <a href="javascript:select('reverse')">reverse</a>
-    Action: <a href="javascript:action('delete')">delete</a>
+    Action: <a href="javascript:action('delete')">delete</a>,
     <a href="javascript:action('reprocess')">reprocess</a>
+    <!--<a href="javascript:action('refresh')">refresh</a>-->
     <table id="file_list" cellspacing="1px">
     <thead>
         <tr>

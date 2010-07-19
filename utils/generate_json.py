@@ -11,7 +11,7 @@ for dialog in sorted(dialogs, lambda x, y: cmp(int(x), int(y))):
     dialogs[dialog].sort(lambda x, y: cmp(x[1], y[1]))
     print '{'
     print '"name":"%s",' % dialog
-    print '"original_audio":"uploads/%s.wav",' % dialog
+    print '"original_audio":"%s",' % commands.getoutput("find /lium/parolee/unsaved/corpus/MEDIA.good/MEDIA1FR_0[012]/MEDIA1FR/DATA/audio -name %s.wav" % dialog).split("\n")[0]
     print '"asr_status":"processed",'
     print '"asr_log":"none",'
     print '"group":"media1-test",'
