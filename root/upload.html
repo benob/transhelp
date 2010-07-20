@@ -8,7 +8,7 @@
 <script type="text/javascript" src="js/jquery.tablesorter.min.js"></script> 
 <script type="text/javascript" src="longpoll.js"></script>
 <script type="text/javascript">
-if(console == undefined) {
+if(this.console == undefined) {
     console = { log: function() {} };
 }
 function startUpload(){
@@ -50,10 +50,10 @@ function list_files() {
             var row = $(list).children().last();
             $(row).find('td.select').html('<input class="select" type="checkbox" />');
         }
-        $('#file_list td.original_audio').each(function () {
+        /*$('#file_list td.original_audio').each(function () {
             $(this).html('<a href="' + $(this).html() + '">' + $(this).html() + '</a>');
-        });
-        $('#file_list').find('.asr_status').each(function() {
+        });*/
+        /*$('#file_list').find('.asr_status').each(function() {
             var text = $(this).html();
             if(text.match(/^waiting/)) { $(this).css("color", "orange"); }
             else if (text.match(/^processed/)) { $(this).css("color", "green"); }
@@ -63,7 +63,7 @@ function list_files() {
             var text = $(this).html();
             if(text.match(/^modified/)) { $(this).css("color", "orange"); }
             else if (text.match(/^validated/)) { $(this).css("color", "green"); }
-        });
+        });*/
         $('#file_list').tablesorter({headers:{0:{sorter:false}, 6:{sorter:'usLongDate'}}}); 
         $('#file_list').trigger('update');
         $('#file_list').trigger('sorton', [[[6,1]]]);
