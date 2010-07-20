@@ -11,6 +11,7 @@ for dialog in sorted(dialogs, lambda x, y: cmp(int(x), int(y))):
     dialogs[dialog].sort(lambda x, y: cmp(x[1], y[1]))
     print '{'
     print '"name":"%s",' % dialog
+    # note that this is only used when importing batch asr output
     print '"original_audio":"%s",' % commands.getoutput("find /lium/parolee/unsaved/corpus/MEDIA.good/MEDIA1FR_0[012]/MEDIA1FR/DATA/audio -name %s.wav" % dialog).split("\n")[0]
     print '"asr_status":"processed",'
     print '"asr_log":"none",'
@@ -33,7 +34,7 @@ for dialog in sorted(dialogs, lambda x, y: cmp(int(x), int(y))):
         if result:
             start = float(result.group(2))
             end = float(result.group(3))
-            speaker = result.group(4)
+            speaker = result.group(4) + "-" + result.group(1)
         print '{'
         print '"name":"%s",' % filename
         print '"dialog":"%s",' % dialog

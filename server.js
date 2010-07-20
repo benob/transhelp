@@ -71,7 +71,7 @@ setInterval(saveDB, 60000);
 
 // process next item in queue
 function processQueue() {
-    console.log("processQueue");
+    //console.log("processQueue");
     if(processingList.length > 0) {
         var name = processingList.shift();
         modified = true;
@@ -88,7 +88,7 @@ function processQueue() {
                     processQueue();
                 } else {
                     console.log("QUEUE: success " + dialog.original_audio);
-                    fs.readFile(dialog.original_audio + ".json", function(error, data) {
+                    fs.readFile("uploads/" + dialog.name + ".json", function(error, data) {
                         data = String(data).replace(/\n/g, ' ').replace(/,\s*\]/g, "]").replace(/,\s*\}/g, "}");
                         var processed = JSON.parse(data)[0];
                         console.log(sys.inspect(processed));
