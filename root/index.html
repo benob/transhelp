@@ -25,27 +25,47 @@
         -moz-box-shadow: 2px 2px 8px #aaa;
         -webkit-box-shadow: 2px 2px 8px #aaa;
     }
-	body { font: 62.5% "Trebuchet MS", sans-serif; color:black; background-color:white;}
+	body {
+        font: 62.5% "Trebuchet MS", sans-serif;
+        color:black;
+        background-color:white;
+        width:80%;
+        /*max-width:600px;*/
+        margin-left:auto;
+        margin-right:auto;
+    }
     #slider {width:100%;margin-top:10px;display:inline-block;margin-bottom:10px;}
-    sentence {display:block; width:80%; text-align:left; border:1px solid #ccc;padding:20px; border-radius:10px;-moz-border-radius:10px;-webkit-border-radius:10px;margin-top:10px;font-size:130%; background-color:white;}
+    sentence {
+        display:block; 
+        /*width:80%;*/
+        text-align:left;
+        padding:20px;
+        border-radius:10px;
+        -moz-border-radius:10px;
+        -webkit-border-radius:10px;
+        margin-top:10px;
+        font-size:130%;
+        background-color:white;
+        border:1px solid gray;
+    }
     placeholder {display: block;padding:10px; }
     sentence.clickable:hover { 
-        border: 1px solid white;
-        box-shadow: inset 2px 2px 10px #bbb;
+        background-color: #eee;
+        /*box-shadow: inset 2px 2px 10px #bbb;
         -moz-box-shadow: inset 2px 2px 10px #bbb;
         -webkit-box-shadow: inset 2px 2px 10px #bbb;
         padding-top: 23px;
         padding-bottom: 17px;
-        padding-left: 23px;
+        padding-left: 23px;*/
     }
     sentence.selected {
-        border: 1px solid white;
+        /*border: 1px solid white;
         box-shadow: inset 2px 2px 10px #bbb;
         -moz-box-shadow: inset 2px 2px 10px #bbb;
         -webkit-box-shadow: inset 2px 2px 10px #bbb;
         padding-top: 23px;
         padding-bottom: 17px;
-        padding-left: 23px;
+        padding-left: 23px;*/
     }
 
     lattice {display:block;margin-bottom:20px;margin-top:-5px;}
@@ -71,6 +91,55 @@
         font-size:70%;
         float:right;
     }
+turn {
+    display:block;
+    background-repeat:no-repeat;
+    min-height:64px;
+    padding-left:48px;
+    padding-right:48px;
+}
+
+turn.left-male {
+    background-image:url('images/male-left-64.png');
+    background-position:left top;
+}
+
+turn.left-female {
+    background-image:url('images/female-left-64.png');
+    background-position:left top;
+}
+
+turn.right-male {
+    background-image:url('images/male-right-64.png');
+    background-position:right top;
+}
+
+turn.right-female {
+    background-image:url('images/female-right-64.png');
+    background-position:right top;
+}
+
+bubbletip {
+    background-position:right;
+    background-repeat:no-repeat;
+    width:14px;
+    height:14px;
+    position:relative;
+    top:24px;
+    display:block;
+}
+
+bubbletip.left {
+    background-image:url('images/bubbletip-left.png');
+    left:-13px;
+    float:left;
+}
+
+bubbletip.right {
+    background-image:url('images/bubbletip-right.png');
+    right:-13px;
+    float:right;
+}
     </style>
 </head>
 <body>

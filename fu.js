@@ -41,11 +41,6 @@ fu.get = function (path, handler) {
   getMap[path] = handler;
 };
 
-// stay running in case of error!
-/*process.addListener('uncaughtException', function (err) {
-    sys.debug('Caught exception: ' + err);
-});*/
-
 var server = createServer(function (req, res) {
       console.log(req.method + " " + req.url);// + " " + JSON.stringify(req.headers));
       if (req.method === "GET" || req.method === "HEAD" || req.method === "POST") {

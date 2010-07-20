@@ -775,7 +775,16 @@ $(function() {
                         if(segment.last_modified) {
                             last_modified = '<span class="last_modified"> Last modified: ' + segment.last_modified + ' </span>';
                         }
-                        $(sentences).append('<sentence class="clickable" title="' + segment.name + '"><placeholder title="' + segment.name + '" segment="' + dialog.name + '" sentence="' + segment.name +'" sentence_index="' + j +'">' + segment.start + "-" + segment.end + last_modified + "<br>" + segment.text + '</placeholder></sentence>');
+                        // F2_M-init-151.r
+                        var speaker_gender = 'male';
+                        var speaker_channel = 'left';
+                        var match = segment.speaker.match(/F2_(M|F)-.*\.([rl])/);
+                        if(match) {
+                            var mapping = {"M":"male", "F":"female", "l":"left", "r":"right"};
+                            speaker_gender = mapping[match[1]];
+                            speaker_channel = mapping[match[2]];
+                        }
+                        $(sentences).append('<turn class="' + speaker_channel + '-' + speaker_gender + '"><bubbletip class="' + speaker_channel + '"/><sentence class="clickable" title="' + segment.name + '"><placeholder title="' + segment.name + '" segment="' + dialog.name + '" sentence="' + segment.name +'" sentence_index="' + j +'">' + segment.start + "-" + segment.end + last_modified + "<br>" + segment.text + '</placeholder></sentence></turn>');
                     }
                     $("sentence").click(function() {
                         if($(this).find("lattice").length == 0) {

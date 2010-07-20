@@ -1,5 +1,6 @@
-HOST = null; // localhost
+HOST = null; // 0.0.0.0
 PORT = 8001;
+DEBUG = true;
 
 var fu = require("./fu"),
     sys = require("sys"),
@@ -9,6 +10,10 @@ var fu = require("./fu"),
     path = require("path"),
     exec = require("child_process").exec,
     formidable = require('./lib/formidable'); // form and file upload handling
+
+process.addListener('uncaughtException', function (err) {
+    sys.debug('Caught exception: ' + JSON.stringify(err));
+});
 
 console.log = function(text) {
     sys.puts(Date() + " " + text);
@@ -70,6 +75,7 @@ process.addListener('SIGTERM', function() {saveDB(true); process.exit();} );
 setInterval(saveDB, 60000);
 
 // process next item in queue
+currentProcess = {}
 function processQueue() {
     //console.log("processQueue");
     if(processingList.length > 0) {
@@ -80,27 +86,40 @@ function processQueue() {
             dialog.asr_status = "running " + String(Date());
             sendMessage("update_dialog", dialog);
             console.log("QUEUE: processing " + dialog.original_audio);
-            exec("utils/process_dialog.sh " + dialog.original_audio, function(error, stdout, stderr) {
+            currentProcess[dialog.name] = exec("utils/process_dialog.sh " + dialog.original_audio, function(error, stdout, stderr) {
+                delete currentProcess[dialog.name];
                 if(error) {
-                    dialog.asr_status = "failed " + String(Date());
+                    if(!dialog.asr_status.match(/^canceling /) && !error.signal == 'SIGKILL') {
+                        dialog.asr_status = "failed " + String(Date());
+                    } else {
+                        dialog.asr_status = "canceled " + String(Date());
+                    }
                     sendMessage("update_dialog", dialog);
-                    console.log("QUEUE: failed " + dialog.original_audio + " error=" + error);
+                    console.log("QUEUE: failed " + dialog.original_audio + " error=" + JSON.stringify(error));
                     processQueue();
                 } else {
                     console.log("QUEUE: success " + dialog.original_audio);
                     fs.readFile("uploads/" + dialog.name + ".json", function(error, data) {
-                        data = String(data).replace(/\n/g, ' ').replace(/,\s*\]/g, "]").replace(/,\s*\}/g, "}");
-                        var processed = JSON.parse(data)[0];
-                        console.log(sys.inspect(processed));
-                        dialog.asr_status = "processed " + String(Date());
-                        dialog.segments = processed.segments;
-                        // update segment index
-                        dialog.segments.map(function(segment) {
-                            segments[segment.name] = segment;
-                        });
-                        dialog.spectrograms = processed.spectrograms;
-                        dialog.audio = processed.audio;
-                        dialog.transcript_status = "unmodified";
+                        if(error) {
+                            dialog.asr_status = "failed " + String(Date());
+                        } else {
+                            data = String(data).replace(/\n/g, ' ').replace(/,\s*\]/g, "]").replace(/,\s*\}/g, "}");
+                            try {
+                                var processed = JSON.parse(data)[0];
+                                console.log(sys.inspect(processed));
+                                dialog.asr_status = "processed " + String(Date());
+                                dialog.segments = processed.segments;
+                                // update segment index
+                                dialog.segments.map(function(segment) {
+                                    segments[segment.name] = segment;
+                                });
+                                dialog.spectrograms = processed.spectrograms;
+                                dialog.audio = processed.audio;
+                                dialog.transcript_status = "unmodified";
+                            } catch(error) {
+                                dialog.asr_status = "failed " + String(Date());
+                            }
+                        }
                         console.log(JSON.stringify(dialog));
                         sendMessage("update_dialog", dialog);
                         processQueue();
@@ -290,14 +309,37 @@ fu.get("/reprocess_dialog", fu.getPostData(function(req, res) {
     list.forEach(function(element) { sendMessage("update_dialog", dialogs[element]); });
 }));
 
-fu.get("/refresh", fu.getPostData(function(req, res) {
+if(DEBUG) { // warining: do not activate this in production, it's insecure
+    fu.get("/eval", fu.getPostData(function(req, res) {
+        var code = qs.parse(url.parse(req.url).query).code;
+        console.log("CODE:" + code);
+        try {
+            var result = JSON.stringify(eval(code));
+        } catch(error) {
+            result = error;
+        }
+        if(result == undefined) result = "";
+        console.log("RESULT:" + result);
+        res.writeHead(200, {'Content-Type': 'text/plain'});
+        res.end(result);
+    }));
+}
+
+fu.get("/cancel_processing", fu.getPostData(function(req, res) {
     var list = JSON.parse(req.post_data);
-    console.log("refresh " + JSON.stringify(list));
-    setTimeout(function() {
-        list.forEach(function(element) {
-            sendMessage("refresh", dialogs[element]);
-        });
-    }, 3000);
+    console.log("cancel " + JSON.stringify(list));
+    list.forEach(function(element) {
+        if(currentProcess[element] != undefined) {
+            console.log("killing " + currentProcess[element].pid);
+            currentProcess[element].kill('SIGKILL');
+            delete currentProcess[element];
+            dialogs[element].asr_status = "canceling " + String(Date());
+        } else {
+            dialogs[element].asr_status = "canceled " + String(Date());
+        }
+        processingList = processingList.filter(function(item) { return item != element; });
+        sendMessage("update_dialog", dialogs[element]);
+    });
     res.end();
 }));
 

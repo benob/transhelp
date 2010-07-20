@@ -98,7 +98,7 @@ function select(type) {
 function action(type) {
     if(type == "delete") {
         var selection = $("input.select[checked!=false]").parents("tr").find(".name").get();
-        if(confirm("Do you really want to delete " + selection.length + " files?")) {
+        if(selection.length > 0 && confirm("Do you really want to delete " + selection.length + " files?")) {
             $.post("/delete_dialog", JSON.stringify(selection.map(function(item){return $(item).html();})), function(data) {
                 if(data.error == "failed") {
                     console.log(data);
@@ -111,8 +111,19 @@ function action(type) {
         }
     } else if(type == "reprocess") {
         var selection = $("input.select[checked!=false]").parents("tr").find(".name").get();
-        if(confirm("Do you really want to reprocess " + selection.length + " files?")) {
+        if(selection.length > 0 && confirm("Do you really want to reprocess " + selection.length + " files?")) {
             $.post("/reprocess_dialog", JSON.stringify(selection.map(function(item){return $(item).html();})), function(data) {
+                if(data.error == "failed") {
+                    console.log(data);
+                } else {
+                    //list_files();
+                }
+            });
+        }
+    } else if(type == "cancel") {
+        var selection = $("input.select[checked!=false]").parents("tr").find(".name").get();
+        if(selection.length > 0 && confirm("Do you really want to cancel " + selection.length + " files?")) {
+            $.post("/cancel_processing", JSON.stringify(selection.map(function(item){return $(item).html();})), function(data) {
                 if(data.error == "failed") {
                     console.log(data);
                 } else {
@@ -173,7 +184,7 @@ Channels: <input name="channels" type="radio" checked title="Left: wizard / Righ
     Selection: <a href="javascript:select('all')">all</a>, <a href="javascript:select('none')">none</a>, <a href="javascript:select('reverse')">reverse</a>
     Action: <a href="javascript:action('delete')">delete</a>,
     <a href="javascript:action('reprocess')">reprocess</a>
-    <!--<a href="javascript:action('refresh')">refresh</a>-->
+    <a href="javascript:action('cancel')">cancel</a>
     <table id="file_list" cellspacing="1px">
     <thead>
         <tr>
