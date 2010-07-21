@@ -1,193 +1,49 @@
-<html>
+<!DOCTYPE html>
+<html lang="en">
 <head>
-<title>Audio transcript manager</title>
-<link rel="stylesheet" href="js/style.css" type="text/css" />
-<script type="text/javascript" src="js/jquery-1.4.2.min.js"></script>
-<link type="text/css" href="css/ui-lightness/jquery-ui-1.8.1.custom.css" rel="stylesheet" />	
-<script type="text/javascript" src="js/jquery-ui-1.8.1.custom.min.js"></script>
-<script type="text/javascript" src="js/jquery.tablesorter.min.js"></script> 
-<script type="text/javascript" src="longpoll.js"></script>
-<script type="text/javascript">
-if(this.console == undefined) {
-    console = { log: function() {} };
-}
-function startUpload(){
-    $('#f1_upload_process').show();
-    $("#wait").show();
-    $("#result").html("");
-    return true;
-}
-
-function stopUpload(message, show_overwrite){
-    $("#result").html(message);
-    $('#f1_upload_process').hide();
-    $('#overwrite input[name=overwrite]').attr('checked', false);
-    if(show_overwrite) {
-        $('#overwrite').show();
-    } else $('#overwrite').hide();
-    $("#wait").hide();
-    list_files();
-    return true;
-}
-
-var file_info = null;
-
-function list_files() {
-    $.getJSON('/list_files', {}, function(data) {
-        file_info = data;
-        var list = $('#file_list > tbody');
-        $(list).empty();
-        var fields = ['select', 'group', 'name', 'original_audio', 'asr_status', 'transcript_status', 'uploaded', 'num_segments'];
-        for(var i = 0; i < data.length; i++) {
-            var table_row = "<tr>";
-            for(var j = 0; j < fields.length ;j++) {
-                table_row += '<td class="' + fields[j] + '">' + data[i][fields[j]] + '</td>';
-            }
-            table_row += "</tr>";
-            var row = $(table_row);
-            $(row).attr("file_num", i);
-            $(list).append(row);
-            var row = $(list).children().last();
-            $(row).find('td.select').html('<input class="select" type="checkbox" />');
-        }
-        /*$('#file_list td.original_audio').each(function () {
-            $(this).html('<a href="' + $(this).html() + '">' + $(this).html() + '</a>');
-        });*/
-        /*$('#file_list').find('.asr_status').each(function() {
-            var text = $(this).html();
-            if(text.match(/^waiting/)) { $(this).css("color", "orange"); }
-            else if (text.match(/^processed/)) { $(this).css("color", "green"); }
-            else if (text.match(/^failed/)) { $(this).css("color", "red"); }
-        });
-        $('#file_list').find('.transcript_status').each(function() {
-            var text = $(this).html();
-            if(text.match(/^modified/)) { $(this).css("color", "orange"); }
-            else if (text.match(/^validated/)) { $(this).css("color", "green"); }
-        });*/
-        $('#file_list').tablesorter({headers:{0:{sorter:false}, 6:{sorter:'usLongDate'}}}); 
-        $('#file_list').trigger('update');
-        $('#file_list').trigger('sorton', [[[6,1]]]);
-    });
-};
-
-$(function() {
-    $('#file_list').addClass('tablesorter');
-    //$("#file_list").tablesorter();
-    $("#file_list").bind("sortStart",function() { 
-        $("#wait").show(); 
-    }).bind("sortEnd",function() { 
-        $("#wait").hide(); 
-    }); 
-    //{sortList:[[6,1]], headers:{6:{sorter:'usLongDate'}}});
-    $('#overwrite input[name=overwrite]').attr('checked', false);
-    list_files();
-});
-
-function select(type) {
-    if(type == "all") {
-        $("input.select").attr("checked", true);
-    } else if(type == "none") {
-        $("input.select").attr("checked", false);
-    } else if(type == "reverse") {
-        $("input.select").each(function() {
-            $(this).attr("checked", !$(this).attr("checked"));
-        });
-    }
-}
-
-function action(type) {
-    if(type == "delete") {
-        var selection = $("input.select[checked!=false]").parents("tr").find(".name").get();
-        if(selection.length > 0 && confirm("Do you really want to delete " + selection.length + " files?")) {
-            $.post("/delete_dialog", JSON.stringify(selection.map(function(item){return $(item).html();})), function(data) {
-                if(data.error == "failed") {
-                    console.log(data);
-                } else {
-                    $("input.select[checked!=false]").parents("tr").fadeOut(function() {
-                        $(this).remove();
-                    });
-                }
-            });
-        }
-    } else if(type == "reprocess") {
-        var selection = $("input.select[checked!=false]").parents("tr").find(".name").get();
-        if(selection.length > 0 && confirm("Do you really want to reprocess " + selection.length + " files?")) {
-            $.post("/reprocess_dialog", JSON.stringify(selection.map(function(item){return $(item).html();})), function(data) {
-                if(data.error == "failed") {
-                    console.log(data);
-                } else {
-                    //list_files();
-                }
-            });
-        }
-    } else if(type == "cancel") {
-        var selection = $("input.select[checked!=false]").parents("tr").find(".name").get();
-        if(selection.length > 0 && confirm("Do you really want to cancel " + selection.length + " files?")) {
-            $.post("/cancel_processing", JSON.stringify(selection.map(function(item){return $(item).html();})), function(data) {
-                if(data.error == "failed") {
-                    console.log(data);
-                } else {
-                    //list_files();
-                }
-            });
-        }
-    } else if(type == "refresh") {
-        var selection = $("input.select[checked!=false]").parents("tr").find(".name").get();
-        $.post("/refresh", JSON.stringify(selection.map(function(item){return $(item).html();})));
-    }
-}
-
-var longpoll = new LongPoll("/poll");
-$(function() {
-    longpoll.on("update_dialog", function(event) {
-        console.log(event.payload);
-        var row = $('#file_list').find('td.name')
-            .filter(function() { return $(this).html() == event.payload.name }).parent();
-        console.log(row);
-        var fields = ['select', 'group', 'name', 'original_audio', 'asr_status', 'transcript_status', 'uploaded', 'num_segments'];
-        for(var i = 0; i < fields.length; i++) {
-            $(row).find('td.' + fields[i]).html(event.payload[fields[i]]);
-        }
-        row.find('td')
-            .css({backgroundColor: 'yellow'}).delay(300)
-            .animate({backgroundColor: 'white'});
-    });
-});
-</script>
-<style type="text/css">
-#f1_upload_process{
-    display:none;
-}
-form{
-}
-</style>
+    <meta charset="iso-8859-1">
+    <title>TransHelp</title>
+    <link rel="stylesheet" href="js/style.css" type="text/css" />
+    <script type="text/javascript" src="js/jquery-1.4.2.min.js"></script>
+    <link type="text/css" href="css/ui-lightness/jquery-ui-1.8.1.custom.css" rel="stylesheet" />	
+    <script type="text/javascript" src="js/jquery-ui-1.8.1.custom.min.js"></script>
+    <script type="text/javascript" src="js/jquery.tablesorter.min.js"></script> 
+    <script type="text/javascript" src="longpoll.js"></script>
+    <script type="text/javascript" src="upload.js"></script>
+    <script type="text/javascript" src="editor.js"></script>
+    <link type="text/css" href="common.css" rel="stylesheet" />
 </head>
 <body>
-<div id="wait" style="display:none;position:fixed; top:0px; left:0px;"><img src="loader.gif" /></div>
-<div id="message" style="display:none;position:fixed; top:0px; right:0px;"></div>
-<form enctype="multipart/form-data" action="/upload" method="POST" target="upload_target" onsubmit="startUpload();">
-<p id="f1_upload_process">Uploading...</p>
-<p id="result">
-<div id="overwrite" style="display:none;"><input name="overwrite" type="checkbox"> Force overwrite</div>
-</p>
-<input type="hidden" name="MAX_FILE_SIZE" value="100000000" />
-Choose a file to upload: <input name="uploadedfile" type="file" /><br />
-Group: <select name="group"><option name="media1">media1</option><option name="media2-newdomain">media2-newdomain</option></select>,
-Channels: <input name="channels" type="radio" checked title="Left: wizard / Right: speaker" value="wiz/spk"> wiz/spk <input name="channels" type="radio" title="Left: speaker / Right: wizard" value="spk/wiz"> spk/wiz<br />
-<input type="submit" value="Upload File" />
-<iframe id="upload_target" name="upload_target" src="#" style="width:0px;height:0px;border:0px solid #fff;"></iframe> 
-</form>
+<div class="tabbar">
+    <div class="tab-header selected" target="#manager">Manager</div>
+    <div class="tab-header" target="#editor">Editor</div>
+    <span style="float:right;color:gray;">TransHelp</span>
+    <div class="tab selected" id="manager">
+        <div id="upload_form">
+        <div id="wait" style="display:none;position:fixed; top:0px; left:0px;"><img src="loader.gif" /></div>
+        <div id="message" style="display:none;position:fixed; top:0px; right:0px;"></div>
+        <form enctype="multipart/form-data" action="/upload" method="POST" target="upload_target" onsubmit="startUpload();">
+            <p id="f1_upload_process">Uploading...</p>
+            <div id="result"></div>
+            <div id="overwrite" style="display:none;"><input name="overwrite" type="checkbox" /> Force overwrite</div>
+            <input type="hidden" name="MAX_FILE_SIZE" value="100000000" />
+            Choose a file to upload: <input name="uploadedfile" type="file" /><br />
+            Group: <select name="group"><option name="media1">media1</option><option name="media2-newdomain">media2-newdomain</option></select>,
+            Channels: <input name="channels" type="radio" checked title="Left: wizard / Right: speaker" value="wiz/spk" /> 
+            wiz/spk <input name="channels" type="radio" title="Left: speaker / Right: wizard" value="spk/wiz" /> spk/wiz<br />
+            <input type="submit" value="Upload File" />
+            <iframe id="upload_target" name="upload_target" src="#" style="width:0px;height:0px;border:0px solid #fff;background:white;float:right;"></iframe> 
+            <a href="javascript:$('#upload_form').hide();">hide form</a>
+        </form>
+        </div>
 
-    <p>
-    List of audio files (<a href="javascript:list_files()">refresh</a>):
-    </p>
-    Selection: <a href="javascript:select('all')">all</a>, <a href="javascript:select('none')">none</a>, <a href="javascript:select('reverse')">reverse</a>
-    Action: <a href="javascript:action('delete')">delete</a>,
-    <a href="javascript:action('reprocess')">reprocess</a>
-    <a href="javascript:action('cancel')">cancel</a>
-    <table id="file_list" cellspacing="1px">
-    <thead>
-        <tr>
+        List of audio files (<a href="javascript:$('#upload_form').show();">upload</a>, <a href="javascript:list_files()">refresh</a>):<br />
+        Selection: <a href="javascript:select('all')">all</a>, <a href="javascript:select('none')">none</a>, <a href="javascript:select('reverse')">reverse</a>
+        Action: <a href="javascript:action('delete')">delete</a>, <a href="javascript:action('reprocess')">reprocess</a>, <a href="javascript:action('cancel')">cancel</a>
+        <table id="file_list" cellspacing="1px">
+        <thead>
+            <tr>
+            <th></th>
             <th></th>
             <th>Group</th>
             <th>Name</th>
@@ -196,9 +52,40 @@ Channels: <input name="channels" type="radio" checked title="Left: wizard / Righ
             <th>Transcript</th>
             <th>Uploaded</th>
             <th>Segments</th>
-        </tr>
-    </thead>
-    <tbody></tbody>
-    </table>
+            </tr>
+        </thead>
+        <tbody></tbody>
+        </table>
+    </div>
+    <div class="tab" id="editor">
+        <div>
+        <span id="toolbar" class="ui-widget ui-corner-all">
+                <button id="play">Play (Space)</button>
+                <button id="pause">Pause (Space)</button>
+                
+                <label for="amount">Time: </label>
+                <input size="5" type="text" id="time" style="border:0; font-weight:bold; background:none;" value="loading"/>
+                Dialog: <select id="showname"></select>
+                <!--<button id="revert">Revert</button>
+                <button id="save">Save</button>
+                <button id="previous">Previous</button><button id="next">Next</button>-->
+                (<a href="upload.html" target="_manager">manage</a>) 
+                <div style="float:right">
+                <button id="undo">Undo (Ctrl-z)</button><button id="redo">Redo (Ctrl-Shift-z)</button>
+                </div>
+                <div id="slider"></div>
+                <audio id="player"></audio>
+                <a href="#" id="show_spectrogram">Show/hide spectrogram</a>
+                <iframe name="spectrogram" id="spectrogram" src="spectrogram/33.html" frameborder="0" width="800"></iframe>
+        </span>
+        </div>
+        <center>
+            <div style="margin-top:110px"></div>
+            <div id="sentences"></div>
+            <div id="icons"><icon class="delete wordlist-icon" title="Delete selected (Delete)"></icon><icon class="edit wordlist-icon" title="Edit selected (Enter)"></icon><icon class="insert wordlist-icon" title="Insert after (Ctrl-Space)"></icon>
+            <icon class="cancel edition-icon" title="Cancel edition (Esc)"></icon><icon class="save edition-icon" title="Save new text (Enter)"></icon></div>
+        </center>
+    </div>
+</div>
 </body>
 </html>

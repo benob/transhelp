@@ -367,15 +367,16 @@ setInterval(function() {
     });
 }, 1000);
 
-function sendMessage(type, payload) {
+/* note: client can be preparing his longpoll and miss a message, therefore we retry up to ttl=5 times. */
+function sendMessage(type, payload, ttl) {
+    ttl = typeof(ttl) != 'undefined' ? ttl : 5;
     if(requests && requests.length > 0) {
         for(var i = 0; i < requests.length; i++) {
             requests[i].response.simpleJSON(200, {message:type, payload:payload});
         }
         requests = [];
-    } else {
-    //    // queue for later use?
-        setTimeout(function() { sendMessage(type, payload); }, 1000);
-        console.log("missed message");
+    } else if(ttl > 0) {
+        setTimeout(function() { sendMessage(type, payload, ttl - 1); }, 1000);
+        console.log("missed message: " + type);
     }
 }

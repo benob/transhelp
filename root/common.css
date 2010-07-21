@@ -1,40 +1,28 @@
-#upload_form {
-    display:none;
-}
-#upload_form form {
-    display:inline-block;
-    border: 1px solid gray;
-    padding:10px;
-    margin:10px;
-    margin-top:0px;
-}
-#f1_upload_process{
-    display:none;
-}
+/* Common */
 .tab-header {
-    position:relative;
-    display:inline-block;
-    border:1px solid gray;
-    background-color:#eee;
-    padding-top:3px;
-    padding-right:8px;
-    padding-left:8px;
-    padding-bottom:2px;
+    position: relative;
+    display: inline-block;
+    border: 1px solid gray;
+    background-color: #eee;
+    padding-top: 3px;
+    padding-right: 8px;
+    padding-left: 8px;
+    padding-bottom: 2px;
     border-top-left-radius: 4px;
     border-top-right-radius: 4px;
     -moz-border-top-left-radius: 4px;
     -moz-border-top-right-radius: 4px;
     -webkit-border-top-left-radius: 4px;
     -webkit-border-top-right-radius: 4px;
-    z-index:100;
+    z-index: 100;
 }
 .tab-header:hover {
-    cursor:pointer;cursor:hand;
+    cursor: pointer;
+    cursor: hand;
 }
 .tab-header.selected {
-    background-color:white;
+    background-color: white;
     border-bottom: 1px solid white;
-    font-weight: bold;
 }
 .tab {
     border-radius: 4px;
@@ -43,16 +31,239 @@
     -moz-border-top-left-radius: 0px;
     -webkit-border-radius: 4px;
     -webkit-border-top-left-radius: 0px;
-    position:relative;
-    top:-1px;
-    border:1px solid gray;
-    padding:20px;
-    display:none;
-    background-color:white;
+    position: relative;
+    top: -1px;
+    border: 1px solid gray;
+    padding: 20px;
+    display: none;
+    background-color: white;
 }
 .tab.selected {
-    display:block;
+    display: block;
 }
 body {
-    background-color:#eee;
+    font: "Trebuchet MS", sans-serif;
+    color: black;
+    background-color: #eee;
+}
+
+/* Manager */
+#upload_form {
+    display: none;
+}
+#upload_form form {
+    display: inline-block;
+    border: 1px solid gray;
+    padding: 10px;
+    margin: 10px;
+    margin-top: 0px;
+}
+#f1_upload_process{
+    display: none;
+}
+
+/* Editor */
+.message {
+    color: red;
+}
+#toolbar {
+    position: fixed;
+    padding:20px;
+    margin-left:auto;
+    margin-right:auto;
+    bottom: 0px;
+    font-size:70%;
+    width: 80%;
+    background-color: #eee; /*#ffcc33;*/
+    border-radius: 5px;
+    -moz-border-radius: 5px;
+    -webkit-border-radius: 5px;
+    border 1px solid gray;
+    z-index: 2;
+    box-shadow: 2px 2px 8px #aaa;
+    -moz-box-shadow: 2px 2px 8px #aaa;
+    -webkit-box-shadow: 2px 2px 8px #aaa;
+}
+#slider {
+    /*width: 80%;*/
+    margin-top: 10px;
+    display: block;
+    margin-bottom: 10px;
+}
+sentence {
+    display: block;
+    /*width: 80%; */
+    text-align: left;
+    padding: 20px;
+    border-radius: 10px;
+    -moz-border-radius: 10px;
+    -webkit-border-radius: 10px;
+    margin-top: 10px;
+    background-color: white;
+    border: 1px solid gray;
+}
+placeholder {
+    display: block;
+    padding: 10px;
+}
+sentence.clickable:hover { 
+    background-color: #eee;
+    /*box-shadow: inset 2px 2px 10px #bbb;
+    -moz-box-shadow: inset 2px 2px 10px #bbb;
+    -webkit-box-shadow: inset 2px 2px 10px #bbb;
+    padding-top: 23px;
+    padding-bottom: 17px;
+    padding-left: 23px;
+    */
+}
+sentence.selected {
+    /*border: 1px solid white;
+    box-shadow: inset 2px 2px 10px #bbb;
+    -moz-box-shadow: inset 2px 2px 10px #bbb;
+    -webkit-box-shadow: inset 2px 2px 10px #bbb;
+    padding-top: 23px;
+    padding-bottom: 17px;
+    padding-left: 23px;
+    */
+}
+lattice {
+    display: block;
+    margin-bottom: 20px;
+    margin-top: -5px;
+}
+wordlist {
+    display: inline-block;
+    vertical-align: top;
+    background-color: #eeeeee;
+    border: 1px solid  #eeeeee;
+    border-radius: 3px;
+    -moz-border-radius: 3px;
+    -webkit-border-radius: 3px;
+    margin: 1px;
+    margin-top: 20px;
+    min-width: 30px;
+}
+word {
+    display: inline-block;
+    background-color: #ffffff;
+    margin: 2px;
+    border-radius: 3px;
+    -moz-border-radius: 3px;
+    -webkit-border-radius: 3px;
+    padding: 3px;
+    padding-left: 6px;
+    padding-right: 6px;
+    border: 1px solid white;
+    cursor: default;
+}
+word.selected {
+    border: 1px solid blue;
+}
+word.unmodified {
+    border: 1px solid blue;
+}
+wordlist.selected {
+    border: 1px solid #aaaaaa;
+    background-color: #dddddd;
+}
+wordlist.anchor {
+    background-color: #ccb;
+    border-color: #ccb;
+    text-align: center;
+    font-weight: bold;
+    padding-left: 3px;
+    padding-right: 3px;
+    padding-top: 5px;
+}
+wordlist.anchor.selected {
+    border: 1px solid #775;
+    background-color: #aa9;
+}
+input.editing {
+    border: 1px solid black;
+    border-radius: 3px;
+    -moz-border-radius: 3px;
+    -webkit-border-radius: 3px;
+    padding: 3px;
+    padding-left: 6px;
+    padding-right: 6px;
+    margin: 2px;
+}
+#icons {
+    display: block;
+    visibility: hidden;
+    position: absolute;
+}
+#edition-icons {
+    display: block;
+    visibility: hidden;
+    position: absolute;
+}
+icon {
+    float: left;
+}
+icon:hover {
+    background-color: #eeeeee;
+    border-radius: 3px;
+    -moz-border-radius: 3px;
+    -webkit-border-radius: 3px;
+}
+/*semannotation {
+    display: inline;
+    padding-left: 2px;
+    padding-right: 2px;
+    background-color: LightSkyBlue;
+    border-radius: 2px;
+    -moz-border-radius: 2px;
+    -webkit-border-radius: 2px;
+}*/
+#spectrogram {
+    margin-top: 10px;
+    display: none;
+}
+.last_modified {
+    color: gray;
+    float: right;
+}
+turn {
+    display: block;
+    background-repeat: no-repeat;
+    min-height: 64px;
+    padding-left: 48px;
+    padding-right: 48px;
+}
+turn.left-male {
+    background-image: url('images/male-left-64.png');
+    background-position: left top;
+}
+turn.left-female {
+    background-image: url('images/female-left-64.png');
+    background-position: left top;
+}
+turn.right-male {
+    background-image: url('images/male-right-64.png');
+    background-position: right top;
+}
+turn.right-female {
+    background-image: url('images/female-right-64.png');
+    background-position: right top;
+}
+bubbletip {
+    background-position: right;
+    background-repeat: no-repeat;
+    width: 14px;
+    height: 14px;
+    position: relative;
+    top: 24px;
+    display: block;
+}
+bubbletip.left {
+    background-image: url('images/bubbletip-left.png');
+    left: -13px;
+    float: left;
+}
+bubbletip.right {
+    background-image: url('images/bubbletip-right.png');
+    right: -13px;
+    float: right;
 }
