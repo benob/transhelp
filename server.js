@@ -343,6 +343,13 @@ fu.get("/cancel_processing", fu.getPostData(function(req, res) {
     res.end();
 }));
 
+fu.get("/log", function(req, res) {
+    exec("tail -1000 log/node.log", function(error, stdout, stderr) {
+        res.writeHead(200, {"Content-Type": "text/plain"}); //, "Content-Length": stdout.length});
+        res.end(stdout);
+    });
+});
+
 // long polling handler
 var requests = []
 fu.get("/poll", function(req, res) {
@@ -360,7 +367,7 @@ setInterval(function() {
         if (request.timestamp < expiration) {
             response = request.response;
             response.simpleJSON(200, {error: "timeout"});
-            console.log("timeout");
+            //console.log("timeout");
             return false;
         }
         return true;

@@ -94,7 +94,7 @@ $(function() {
             $("#redo").button('enable');
             if(undoActions.length == 0) {
                 $("#undo").button('disable');
-                $("#save_sentence").button('disable');
+                //$("#save_sentence").button('disable');
             }
         });
         $("#redo").button({
@@ -115,14 +115,18 @@ $(function() {
                 action.perform();
             }
             $("#undo").button('enable');
-            $("#save_sentence").button('enable');
+            //$("#save_sentence").button('enable');
             if(redoActions.length == 0) {
                 $("#redo").button('disable');
             }
         });
-        $("#show_spectrogram").click(function() {
+        /*$("#show_spectrogram").click(function() {
             $("#spectrogram").toggle();
-        });
+        });*/
+        // TODO save and reaload state
+        $("#toolbar").draggable({drag: function(event, ui) {
+        }}).resizable({minWidth: 312, minHeight:48, stop: function(event, ui) {
+        }}).css({top:null, right:null, position:"fixed"});
     });
 
     function remove(isSemantic, elements, immediate, noselect) { // elements need to be ordered naturally!
@@ -182,7 +186,7 @@ $(function() {
         redoActions = Array();
         action.perform();
         $("#undo").button('enable');
-        $("#save_sentence").button('enable');
+        //$("#save_sentence").button('enable');
     }
 
     function chooseWord(isSemantic, word) {
@@ -212,7 +216,7 @@ $(function() {
         redoActions = Array();
         action.perform();
         $("#undo").button('enable');
-        $("#save_sentence").button('enable');
+        //$("#save_sentence").button('enable');
     }
 
     function insert(isSemantic, element, after, noselect) {
@@ -256,7 +260,7 @@ $(function() {
         redoActions = Array();
         action.perform();
         $("#undo").button('enable');
-        $("#save_sentence").button('enable');
+        //$("#save_sentence").button('enable');
     }
 
     function selectionChanged(target, nocancel) {
@@ -297,7 +301,7 @@ $(function() {
             }
         });
         $("lattice").parent().find("placeholder").html(current_segment.start + "-" + current_segment.end + "<span class=\"last_modified\"> Last modified: " + current_segment.last_modified + " </span><span class=\"message\"> Saved </span><br>" + text);
-        $("#segmentation").remove();
+        //$("#segmentation").remove();
         $("#save_sentence").remove();
         $("lattice").remove();
         $("placeholder").show();
@@ -715,7 +719,8 @@ $(function() {
         
         // setup height
         // change css directly so that future wordlists have the same height
-        var rules = document.styleSheets[1].cssRules;
+        var rules = document.styleSheets[0].cssRules;
+        console.log(rules);
         for(var i = 0; i < rules.length; i++) {
             if(rules[i].selectorText == "wordlist") {
                 rules[i].style.height = null;
@@ -729,7 +734,7 @@ $(function() {
         });
         max += 10;
         // change css directly so that future wordlists have the same height
-        var rules = document.styleSheets[1].cssRules;
+        var rules = document.styleSheets[0].cssRules;
         for(var i = 0; i < rules.length; i++) {
             if(rules[i].selectorText == "wordlist") {
                 rules[i].style.height = max + "px";
@@ -764,7 +769,7 @@ $(function() {
                     //player.src = "http://lium3/~favre/player/audio/" + value.split(".")[0] + ".ogg";
                 }
                 player.load();
-                $("#spectrogram")[0].setAttribute("src", "spectrogram/" + value.split(".")[0] + ".html");
+                //$("#spectrogram")[0].setAttribute("src", "spectrogram/" + value.split(".")[0] + ".html");
                 $.getJSON("/dialog?name=" + value, {}, function(dialog) {
                     current_dialog = dialog;
                     var sentences = $("#sentences")[0];
@@ -802,7 +807,7 @@ $(function() {
                                 current_segment = segment;
                                 $("#player")[0].currentTime = segment.start;
                                 $("lattice").remove();
-                                $("#segmentation").remove();
+                                //$("#segmentation").remove();
                                 $("#save_sentence").remove();
                                 $("placeholder").show();
                                 $(placeholder).hide();
@@ -810,12 +815,13 @@ $(function() {
                                 var sentence = $(placeholder).parent()[0];
                                 //$(placeholder).hide();
                                 $(sentence).append("<lattice></lattice>");
-                                $(sentence).append('<button id="segmentation" title="Edit segmentation (Ctrl-e)">Edit segmentation</button><button id="save_sentence" title="Save sentence (Ctrl-s)">Save sentence</button>');
-                                $("#segmentation").button().click(function() {
+                                //$(sentence).append('<button id="segmentation" title="Edit segmentation (Ctrl-e)">Edit segmentation</button><button id="save_sentence" title="Save sentence (Ctrl-s)">Save sentence</button>');
+                                $(sentence).append('<a href="#" id="save_sentence" title="Save sentence (Ctrl-s)">Save sentence</a>');
+                                /*$("#segmentation").click(function() {
                                     alert("Not implemented yet");
                                     return false;
-                                });
-                                $("#save_sentence").button({disabled:true}).click(function() {
+                                });*/
+                                $("#save_sentence").click(function() {
                                     saveSentence($(this).parent("sentence"));
                                     return false;
                                 });

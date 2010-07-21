@@ -39,7 +39,7 @@ function list_files() {
             $(list).append(row);
             var row = $(list).children().last();
             $(row).find('td.action-select').html('<input class="select" type="checkbox" />');
-            $(row).find('td.action-edit').html('<a href="/">edit</a>');
+            $(row).find('td.action-edit').html('<a class="edit-transcript" href="#">edit</a>');
         }
         /*$('#file_list td.original_audio').each(function () {
             $(this).html('<a href="' + $(this).html() + '">' + $(this).html() + '</a>');
@@ -55,9 +55,14 @@ function list_files() {
             if(text.match(/^modified/)) { $(this).css("color", "orange"); }
             else if (text.match(/^validated/)) { $(this).css("color", "green"); }
         });*/
-        $('#file_list').tablesorter({headers:{0:{sorter:false}, 6:{sorter:'usLongDate'}}}); 
+        $('.edit-transcript').click(function(event) {
+            $('#editor-tab').click();
+            var name = $(event.target).parents("tr").find(".name").html();
+            $('#showname').val(name).change();
+        });
+        $('#file_list').tablesorter({headers:{0:{sorter:false}, 7:{sorter:'usLongDate'}}}); 
         $('#file_list').trigger('update');
-        $('#file_list').trigger('sorton', [[[6,1]]]);
+        $('#file_list').trigger('sorton', [[[5,1]]]);
     });
 };
 
