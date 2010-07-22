@@ -73,12 +73,20 @@ function saveDB(force) {
     }
 }
 
-process.addListener('SIGINT', function() {saveDB(true); process.exit();} );
-process.addListener('SIGTERM', function() {saveDB(true); process.exit();} );
+function cleanup() {
+    for(name in currentProcess) { 
+        processingList.push(name);
+        currentProcess[name].kill('SIGKILL');
+    }
+    saveDB(true);
+    process.exit(1);
+}
+process.addListener('SIGINT', cleanup);
+process.addListener('SIGTERM', cleanup);
 setInterval(saveDB, 60000);
 
 // process next item in queue
-currentProcess = {}
+currentProcess = {};
 parallelJobs = 0;
 maxParallelJobs = 4;
 function processQueue() {
@@ -146,7 +154,7 @@ function processQueue() {
 
 // init queue loop
 //processQueue();
-setInterval(processQueue, 5000);
+setInterval(processQueue, 1000);
 
 //fu.basicAuth = "user:password";
 fu.listen(PORT, HOST);
@@ -392,7 +400,7 @@ setInterval(function() {
 }, 1000);
 
 /* note: client can be preparing his longpoll and miss a message, therefore we retry up to ttl=5 times. */
-function sendMessage(type, payload, ttl) {
+function sendMessageLongPoll(type, payload, ttl) {
     ttl = typeof(ttl) != 'undefined' ? ttl : 5;
     if(requests && requests.length > 0) {
         for(var i = 0; i < requests.length; i++) {
@@ -404,3 +412,47 @@ function sendMessage(type, payload, ttl) {
         console.log("missed message: " + type);
     }
 }
+
+var message_queue = [];
+var message_id = new Date().getTime();
+function sendMessage(type, payload, ttl) {
+    ttl = typeof(ttl) != 'undefined' ? ttl : 5000; // by default messages leave 5 seconds
+    var time = new Date().getTime();
+    message_queue.push({type:type, id: message_id, time: time, discard: ttl + time, payload: payload});
+    console.log("EVENT: " + message_id);
+    message_id ++;
+}
+
+setInterval(function() {
+    var time = new Date().getTime();
+    message_queue = message_queue.filter(function(element) {
+        return element.discard > time;
+    });
+    /*for(id in message_queue) {
+        if(message_queue[id].discard < time) {
+            delete message_queue[id];
+        }
+    }*/
+}, 1000);
+
+/*setInterval(function() {
+    sendMessage("ping", String(Date()));
+}, 2000);*/
+
+// eventsource handler (for one client)
+fu.get("/event", function(req, res) {
+    var last_id = req.headers["last-event-id"];
+    //console.log("last-event-id: " + last_id);
+    res.writeHead(200, {'Content-Type': 'text/event-stream'});
+    for(var i = 0; i < message_queue.length; i++) {
+        var message = message_queue[i];
+        if(last_id == undefined || message.id > last_id) {
+            res.write("event:" + message.type + "\n");
+            res.write("id:" + message.id + "\n");
+            res.write("data:" + JSON.stringify(message.payload) + "\n");
+            res.write("\n");
+            console.log("EVENT: sent " + message.id);
+        }
+    }
+    res.end();
+});

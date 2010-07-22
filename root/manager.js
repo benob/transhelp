@@ -120,21 +120,27 @@ function action(type) {
     }
 }
 
-var longpoll = new LongPoll("/poll");
+/*var longpoll = new LongPoll("/poll");
 $(function() {
-    longpoll.on("update_dialog", function(event) {
-        console.log(event.payload);
+    longpoll.on("update_dialog", function(event) {*/
+var eventsource = new EventSource("/event");
+$(function() {
+    // we get those messages in double. don't know why.
+    eventsource.addEventListener("update_dialog", function(event) {
+        var message = event.data;
+        //console.log(message);
+        var dialog = JSON.parse(message.replace("\n", ""));
         var row = $('#file_list').find('td.name')
-            .filter(function() { return $(this).html() == event.payload.name }).parent();
-        console.log(row);
+            .filter(function() { return $(this).html() == dialog.name }).parent();
+        //console.log(dialog.name);
         var fields = ['select', 'group', 'name', 'original_audio', 'asr_status', 'transcript_status', 'uploaded', 'num_segments'];
         for(var i = 0; i < fields.length; i++) {
-            $(row).find('td.' + fields[i]).html(event.payload[fields[i]]);
+            $(row).find('td.' + fields[i]).html(dialog[fields[i]]);
         }
         row.find('td')
             .css({backgroundColor: 'yellow'}).delay(300)
             .animate({backgroundColor: 'white'});
-    });
+    }, false);
     $(".tab-header").click(function(event) {
         $('.tab').removeClass('selected');
         $($(event.target).attr("target")).addClass('selected');
