@@ -79,9 +79,12 @@ setInterval(saveDB, 60000);
 
 // process next item in queue
 currentProcess = {}
+parallelJobs = 0;
+maxParallelJobs = 4;
 function processQueue() {
     //console.log("processQueue");
-    if(processingList.length > 0) {
+    if(processingList.length > 0 && parallelJobs < maxParallelJobs) {
+        parallelJobs ++;
         var name = processingList.shift();
         modified = true;
         var dialog = dialogs[name];
@@ -90,6 +93,7 @@ function processQueue() {
             sendMessage("update_dialog", dialog);
             console.log("QUEUE: processing " + dialog.original_audio);
             currentProcess[dialog.name] = exec("utils/process_dialog.sh " + dialog.original_audio, function(error, stdout, stderr) {
+                parallelJobs --;
                 delete currentProcess[dialog.name];
                 if(error) {
                     if(!dialog.asr_status.match(/^canceling /) && !error.signal == 'SIGKILL') {
@@ -99,7 +103,7 @@ function processQueue() {
                     }
                     sendMessage("update_dialog", dialog);
                     console.log("QUEUE: failed " + dialog.original_audio + " error=" + JSON.stringify(error));
-                    processQueue();
+                    //processQueue();
                 } else {
                     console.log("QUEUE: success " + dialog.original_audio);
                     fs.readFile("uploads/" + dialog.name + ".json", function(error, data) {
@@ -125,7 +129,7 @@ function processQueue() {
                         }
                         console.log(JSON.stringify(dialog));
                         sendMessage("update_dialog", dialog);
-                        processQueue();
+                        //processQueue();
                     });
                 }
                 console.log(stdout);
@@ -133,16 +137,16 @@ function processQueue() {
             });
         } else {
             console.log("QUEUE: item '" + name + "' not found");
-            processQueue();
+            //processQueue();
         }
     } else {
         //console.log("QUEUE: nothing to do");
-        setTimeout(processQueue, 5000);
     }
 }
 
 // init queue loop
-processQueue();
+//processQueue();
+setInterval(processQueue, 5000);
 
 //fu.basicAuth = "user:password";
 fu.listen(PORT, HOST);

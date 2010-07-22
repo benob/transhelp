@@ -38,13 +38,15 @@ for dialog in sorted(dialogs, lambda x, y: cmp(int(x), int(y))):
         print '{'
         print '"name":"%s",' % filename
         print '"dialog":"%s",' % dialog
-        print '"start":"%.2f",' % start
-        print '"end":"%.2f",' % end
+        print '"segment_start":"%.2f",' % start
+        print '"segment_end":"%.2f",' % end
         print '"speaker":"%s",' % speaker
         print '"modified":"unmodified",'
         print '"wordlists":['
         words = []
         text = []
+        min_start = None
+        max_end = None
         for line in open(filename):
             tokens = line.split()
             if len(tokens) == 1:
@@ -57,9 +59,13 @@ for dialog in sorted(dialogs, lambda x, y: cmp(int(x), int(y))):
                     words.sort(lambda x, y: cmp(float(y[3]), float(x[3])))
                     if words[0][2] != 'eps':
                         text.append(words[0][2])
+                        wordlist_start = float(tokens[3])/100 + start
+                        wordlist_end = float(tokens[4])/100 + start
+                        if min_start == None or min_start > wordlist_start: min_start = wordlist_start
+                        if max_end == None or max_end < wordlist_end: max_end = wordlist_end
                         print '    {'
-                        print '    "start":%.2f,' % (float(tokens[3])/100 + start)
-                        print '    "end":%.2f,' % (float(tokens[4])/100 + start)
+                        print '    "start":%.2f,' % wordlist_start
+                        print '    "end":%.2f,' % wordlist_end
                         print '    "words":["' + '", "'.join([x[2].replace('"', '\\"') for x in words if x[2] != 'eps']) + '"],'
                         print '    "selected":0'
                         print '    },' # warning: we generate invalid json that has to be fixed
@@ -68,6 +74,10 @@ for dialog in sorted(dialogs, lambda x, y: cmp(int(x), int(y))):
                 print >>stderr, 'ERROR: unexpected line "%s"' % line.strip()
                 sys.exit(1)
 
+        if min_start = None: min_start = start
+        if max_end = None: max_end = end
+        print '"start":"%.2f",' % min_start
+        print '"end":"%.2f",' % max_end
         print '],'
         print '"text":"%s",' % ' '.join(text).replace('"', '\\"')
         print '},' # warning: we generate invalid json that has to be fixed

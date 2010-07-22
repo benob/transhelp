@@ -774,6 +774,7 @@ $(function() {
                     current_dialog = dialog;
                     var sentences = $("#sentences")[0];
                     $(sentences).empty();
+                    dialog.segments.sort(function(a, b) { return (1.0 * a.start + 1.0 * a.end) / 2 - (1.0 * b.start + 1.0 * b.end) / 2; });
                     for(var j = 0; j < dialog.segments.length; j++) {
                         last_modified = "";
                         var segment = dialog.segments[j];
