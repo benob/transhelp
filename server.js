@@ -40,6 +40,9 @@ for(var i = 0; i < content.length; i++) {
         content[i].uploaded = String(Date());
     }
     content[i].index = i; // setup index system
+    if(content[i].asr_status.match(/^running/)) {
+        content[i].asr_status = "failed (server killed)";
+    }
 }
 console.log("done");
 
@@ -348,6 +351,16 @@ fu.get("/log", function(req, res) {
         res.writeHead(200, {"Content-Type": "text/plain"}); //, "Content-Length": stdout.length});
         res.end(stdout);
     });
+});
+
+fu.get("/export", function(req, res) {
+    var body = JSON.stringify(content);
+    res.writeHead(200, {
+        "Content-Type": "text/plain",
+        "Content-Length": body.length,
+        "Content-Disposition": 'attachment;filename="transhelp_db.json"'
+    });
+    res.end(body);
 });
 
 // long polling handler

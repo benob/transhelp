@@ -17,6 +17,8 @@
 <div class="tabbar">
     <div id="manager-tab" class="tab-header selected" target="#manager">Manager</div>
     <div id="editor-tab" class="tab-header" target="#editor">Editor</div>
+    <div id="help-tab" class="tab-header" target="#help">Help</div>
+    <div id="export-tab" class="tab-header" target="#export">Export</div>
     <div id="log-tab" class="tab-header" target="#log">Log</div>
     <span style="float:right;color:gray;">TransHelp</span>
 
@@ -88,6 +90,35 @@
     <div class="tab" id="log">
         <div id="log-content"></div>
         <a href="javascript:$.get('/log', function(data) { $('#log-content').html(data.replace(/\n/g, '<br>')); })">refresh</a>
+    </div>
+    <div class="tab" id="export">
+        You can <a href="/export">download</a> the current database in JSON.
+    </div>
+    <div class="tab" id="help">
+        <h1>Editing</h1>
+            <h2>Notes</h2>
+                <ul>
+                <li>You can move the player around and resize it.</li>
+                <li>You can select multiple words and edit them at once.</li>
+                <li>If you enter multiple words in the editing box, they are handled correctly.</li>
+                <li>The playhead is always positionned on the first selected word.</li>
+                <li>When editing words, timing information is interpolated from neighboring words.</li>
+                <li>Playing does not stop at the end of a sentence.</li>
+                </ul>
+            <h2>Keyboard shortcuts</h2>
+                <ul>
+                <li>Ctrl-a: select all words</li>
+                <li>Ctrl-s: save sentence</li>
+                <li>Ctrl-z: undo</li>
+                <li>Ctrl-shift-z: redo</li>
+                <li>Enter: edit/validate selection</li>
+                <li>Space: play/pause</li>
+                <li>Esc: undo edition</li>
+                <li>Ctrl-space: add word after selection</li>
+                <li>Delete: delete selection</li>
+                <li>Arrows/Tab: navigate</li>
+                <li>Arrows/Tab+shift: select</li>
+                </ul>
     </div>
 </div>
 </body>
