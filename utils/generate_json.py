@@ -74,8 +74,8 @@ for dialog in sorted(dialogs, lambda x, y: cmp(int(x), int(y))):
                 print >>stderr, 'ERROR: unexpected line "%s"' % line.strip()
                 sys.exit(1)
 
-        if min_start = None: min_start = start
-        if max_end = None: max_end = end
+        if min_start == None: min_start = start
+        if max_end == None: max_end = end
         print '"start":"%.2f",' % min_start
         print '"end":"%.2f",' % max_end
         print '],'
