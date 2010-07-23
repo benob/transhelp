@@ -1,4 +1,8 @@
-Database schema:
+* Deps:
+get and build http://nodejs.org/dist/node-v0.1.101.tar.gz
+git clone git clone http://github.com/felixge/node-formidable.git lib/formidable
+
+* Database schema:
 TODO: update to latest version
 
 dialogs: [
@@ -25,4 +29,10 @@ dialogs: [
     }
 ]
 
+* Generate db from already existing ASR output:
 python utils/generate_json.py ../latMEDIA1_2010_JUIN/*/*saus | iconv -f latin1 -t utf8 > data/db.json
+echo -n [] > data/db.json.processingList
+
+* Generate empty db:
+echo -n [] > data/db.json
+echo -n [] > data/db.json.processingList
