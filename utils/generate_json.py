@@ -14,6 +14,7 @@ for dialog in sorted(dialogs, lambda x, y: cmp(int(x), int(y))):
     # note that this is only used when importing batch asr output
     print '"original_audio":"%s",' % commands.getoutput("find /lium/parolee/unsaved/corpus/MEDIA.good/MEDIA1FR_0[012]/MEDIA1FR/DATA/audio -name %s.wav" % dialog).split("\n")[0]
     print '"asr_status":"processed",'
+    print '"channel_layout":"unknown",'
     print '"asr_log":"none",'
     print '"group":"media1-test",'
     print '"transcript_status":"unmodified",'
@@ -74,11 +75,11 @@ for dialog in sorted(dialogs, lambda x, y: cmp(int(x), int(y))):
                 print >>stderr, 'ERROR: unexpected line "%s"' % line.strip()
                 sys.exit(1)
 
+        print '],'
         if min_start == None: min_start = start
         if max_end == None: max_end = end
         print '"start":"%.2f",' % min_start
         print '"end":"%.2f",' % max_end
-        print '],'
         print '"text":"%s",' % ' '.join(text).replace('"', '\\"')
         print '},' # warning: we generate invalid json that has to be fixed
     print ']},'

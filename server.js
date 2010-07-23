@@ -251,6 +251,7 @@ fu.get("/upload", function(req, res) {
                         if(!error) {
                             var dialog = {
                                 group: fields["group"],
+                                channel_layout: fields["channels"];
                                 name: name,
                                 original_audio: destination,
                                 asr_status: "waiting",
