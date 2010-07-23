@@ -719,13 +719,14 @@ $(function() {
         
         // setup height
         // change css directly so that future wordlists have the same height
-        var rules = document.styleSheets[0].cssRules;
-        console.log(rules);
-        for(var i = 0; i < rules.length; i++) {
-            if(rules[i].selectorText == "wordlist") {
-                rules[i].style.height = null;
-            } else if(rules[i].selectorText == "wordlist.anchor") {
-                rules[i].style.height = null;
+        for(var sheet = 0; sheet < document.styleSheets.length; sheet++) {
+            var rules = document.styleSheets[sheet].cssRules;
+            for(var i = 0; i < rules.length; i++) {
+                if(rules[i].selectorText == "wordlist") {
+                    rules[i].style.height = null;
+                } else if(rules[i].selectorText == "wordlist.anchor") {
+                    rules[i].style.height = null;
+                }
             }
         }
         max = 0;
@@ -734,12 +735,14 @@ $(function() {
         });
         max += 10;
         // change css directly so that future wordlists have the same height
-        var rules = document.styleSheets[0].cssRules;
-        for(var i = 0; i < rules.length; i++) {
-            if(rules[i].selectorText == "wordlist") {
-                rules[i].style.height = max + "px";
-            } else if(rules[i].selectorText == "wordlist.anchor") {
-                rules[i].style.height = (max - 5) + "px";
+        for(var sheet = 0; sheet < document.styleSheets.length; sheet++) {
+            var rules = document.styleSheets[sheet].cssRules;
+            for(var i = 0; i < rules.length; i++) {
+                if(rules[i].selectorText == "wordlist") {
+                    rules[i].style.height = max + "px";
+                } else if(rules[i].selectorText == "wordlist.anchor") {
+                    rules[i].style.height = (max - 5) + "px";
+                }
             }
         }
 
