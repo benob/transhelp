@@ -11,10 +11,12 @@ var fu = require("./fu"),
     exec = require("child_process").exec,
     formidable = require('./lib/formidable'); // form and file upload handling
 
+// instead of dying on exception, we just log it
 process.addListener('uncaughtException', function (err) {
     sys.debug('Caught exception: ' + JSON.stringify(err));
 });
 
+// add date to log
 console.log = function(text) {
     sys.puts(Date() + " " + text);
 }
@@ -22,6 +24,7 @@ console.log = function(text) {
 // while we don't have proper serialization:
 dbFile = "data/db.json";
 
+// load database
 console.log("reading db from " + dbFile + "...");
 data = fs.readFileSync(dbFile);
 data = String(data).replace(/\n/g, ' ').replace(/,\s*\]/g, "]").replace(/,\s*\}/g, "}");
@@ -31,6 +34,7 @@ var segments = {};
 var processingList = JSON.parse(String(fs.readFileSync(dbFile + ".processingList")).replace(/\n/g, ''));
 var modified = false;
 
+// setup index, cleanup status
 for(var i = 0; i < content.length; i++) {
     content[i].segments.forEach(function(segment) {
         segments[segment.name] = segment;
@@ -46,10 +50,11 @@ for(var i = 0; i < content.length; i++) {
 }
 console.log("done");
 
-function saveDB(force) {
-    if(modified || force) {
+// save db, synchronously if necessary
+function saveDB(sync) {
+    if(modified || sync) {
         modified = false;
-        if(force) {
+        if(sync) {
             fs.writeFileSync(dbFile, JSON.stringify(content));
             console.log("saved db to " + dbFile);
             fs.writeFileSync(dbFile + ".processingList", JSON.stringify(processingList));
@@ -73,6 +78,7 @@ function saveDB(force) {
     }
 }
 
+// kill running processes and save db
 function cleanup() {
     for(name in currentProcess) { 
         processingList.push(name);

@@ -1,12 +1,47 @@
-* Deps:
-get and build http://nodejs.org/dist/node-v0.1.101.tar.gz
-git clone git clone http://github.com/felixge/node-formidable.git lib/formidable
+= Generalities =
 
-* Database schema:
-TODO: update to latest version
+TransHelp is a user interface to help with manual transcription of audio files
+using automatic speech recognition.  The source code is located at
+http://github.com/benob/transhelp.
 
-dialogs: [
+It uses [http://nodejs.org node.js] (version 0.1.100) on the server side, html5
+and [http://jquery.com jquery] (version 1.4.2) on the client side. They allow
+for dynamic interactions.
+
+The tool consists of a web server and an in-browser client that can:
+# Manage ASR
+# Be used to edit transcripts by hand
+
+* Dependencies:
+node: get and build http://nodejs.org/dist/node-v0.1.101.tar.gz
+formidable: git clone http://github.com/felixge/node-formidable.git lib/formidable
+
+== running ==
+
+* Generate empty db:
+echo -n [] > data/db.json
+echo -n [] > data/db.json.processingList
+
+* Generate db from already existing ASR output:
+python utils/generate_json.py ../latMEDIA1_2010_JUIN/*/*saus | iconv -f latin1 -t utf8 > data/db.json
+echo -n [] > data/db.json.processingList
+
+./run.sh
+then point browser to host:8001
+The log is in log/node.log
+
+= Database format =
+
+ dialogs: [
     {
+        name: dialog_id,
+        original_audio: "uploads/dialog_id.wav",
+        asr_status: "processed",
+        channel_layout: "unknown",
+        group: "media1-test",
+        transcript_status: "unmodified",
+        shown: "true",
+        uploaded: "date",
         audio: ["audio/file.mp3", "audio/file.ogg", "audio/file.wav"],
         spectrogram: [ "images/name01.png", "images/name02.png" ],
         segments: [
@@ -21,18 +56,182 @@ dialogs: [
                         start: 5.0,
                         end: 6.0,
                         words: [ "le", "la", "les" ],
-                        selected = 0,
-                    }
+                        selected: 0,
+                    }, ...
                 ]
-            }
+            }, ...
         ],
-    }
-]
+    }, ...
+ ]
 
-* Generate db from already existing ASR output:
-python utils/generate_json.py ../latMEDIA1_2010_JUIN/*/*saus | iconv -f latin1 -t utf8 > data/db.json
-echo -n [] > data/db.json.processingList
+* name is a unique id for a dialog (from the wav filename) or a segment (from
+  the filename of the confusion network)
+* original_audio is the audio file as uploaded (generally in uploads/)
+* asr_status: waiting, running, processed, failed, canceling, canceled
+  (followed by an optional time stamp)
+* channel_layout: unknonw, spk/wiz (speaker on left, wizard on right) or
+  wiz/spk (the opposite)
+* group: a free string of text to identify a set of dialogs
+* transcript_status: unmodified, modified, validated (the validation button is
+  not implemented yet, but it should be used to indicate that the transcript was
+  approved by a human)
+* shown: true/false (not used anymore? maybe a deleted file is not shown
+  anymore but kept in the database)
+* uploaded: timestamp of upload or start time of server if undefined
+* audio: a list of audio files for use by the web browser's audio player
+* spectrogram: a list of images that represent the spectrogram of the audio
+  file (not used yet)
+* segments: a list of segments
+* start, end: time in second of the begining/end of the first/last word of the
+  segment (more accurate than segmentation boundaries that usually contain long
+  silences)
+* speaker contains the speaker name (if known)
+* text is the one-best (or human corrected) transcript of a segment
+* wordlists store confusion networks as arrays of possible words for a given
+  time span; each wordlist is a confusion set with start/end times, a list of
+  words and the word that is currently selected to be in the transcript.
 
-* Generate empty db:
-echo -n [] > data/db.json
-echo -n [] > data/db.json.processingList
+= Internals =
+
+Almost all the code is written in javascript. A few scripts are in shell and
+python. All the server side code is pseudo-asynchroneous, requiring some tricks
+for synchronization. Note that node does not execute any of the javascript in
+parallel, just system functions (read in a file...). Therefore, in blocking
+sections where no system call occurs, the order of the callbacks is
+deterministic!
+
+== Server side ==
+
+The server code is in server.js. It uses fu.js from the node example chat
+program to serve files and for "ajax" interactions. fu was modified to handle a
+document root (all files in that directory are served), basic authentication
+with a fixed user/password pair (using base64.js), POST queries, and partial
+content headers so that html5/audio from firefox/chromium works. It uses
+./lib/formidable/ for handling file uploads.
+
+The server does not use a conventional database, all the data is kept in
+memory, loaded from a json file (data/db.json) at startup and saved
+periodically and at exit. This approach is a quick hack (specifically not
+scalable to large sized databases) and should be refactored. The client
+operates on small chunks of the database (dialog, segment...) where some of the
+fields have been nulled to minimize transfers.
+
+In addition to serving file lists and transcripts, the server manages a queue
+of processing tasks (ASR). It allows to run up to maxParallelJobs=4 jobs in
+parallel. The queue is saved in data/db.processingList. Jobs that are running
+when the server gets killed are also killed and marked as failed.
+
+A number of ajax methods are available to the client:
+* /dialogs returns a list of dialog ids json-encoded in an array.
+* /dialog?name=id returns a json-encoded dialog where wordlists in segments
+  have been nullified. All other fields are valid.
+* /segment?name=id returns a json-encoded segment with all wordlist content this time.
+* /save_segment saves a segment given in json-encoded POST data containing
+  three fields: {segment=the_segment,index=segment_index_in_dialog,dialog=dialog_id}
+* /list_files returns a json-encoded array with all dialogs with the segments,
+  spectrograms, audio fields nullified. A num_segments fields is added to each
+  dialog.
+* /upload parses form data using formidable, saves the uploaded file, creates
+  an empty dialog and queues it for processing.
+* /delete_dialog deletes a json-encoded list of dialog ids provided in POST data.
+* /reprocess_dialog requeues a json-encoded list of dialog ids provided in POST data.
+* /cancel_processing cancels queued/running jobs for a json-encoded list of
+  dialog ids provided in POST.
+* /export returns the internal database in json format with download friendly headers.
+
+Debugging:
+* /log returns the last 1000 lines of the log file.
+* /eval?code=expression evaluates free javascript code on the server. This
+  function is a severe security risk that should only be used for debugging.
+
+The next two calls are for push notification to the client (like the fact that
+a processing was completed). They are quite experimental and very buggy. They
+should be reimplemented properly (using web sockets) or dropped altogether in
+favor of classic polling:
+* /poll implements support for long-polling. The client request is kept open
+  until an event or timeout arrives at which point it replies.
+* /event is similar to /poll, but it implements the event-source protocol that
+  browsers will soon support.
+
+== Processing==
+
+The main processing script is called on each element of the processing queue:
+ utils/process_dialog.sh <wav_file>
+It is assumed that the file is kHz encoded telephone speech of the media domain.
+
+process_dialog.sh runs those steps:
+# generate mp3 and ogg vorbis audio files for remote playing of audio files
+# create spectrogram pictures from audio for segment editing (not used yet)
+# run ASR system
+# generate json representation of ASR output
+
+create_spectrogram.sh runs those steps:
+# split left and right channels
+# compute spectrogram images using python library (svt.py)
+# paste images from left and right channels
+# split resulting image in smaller parts suitable for web browser usage
+
+../asr/run_asr.sh runs the asr system synchronously (using only one cpu). Note
+that it requires 8kHz audio and an absolute file name parameter:
+# split channels and convert to wav and sph
+# extract mfcc features for segmentation
+# run telephone-specific segmenter
+# generate plp features for ASR
+# run sphinx ASR system
+Results are stored in latp5 confusion networks which shall be read by generate_json.py.
+
+genenrate_json.py can work either with offline run ASR, in which case it fills
+the gaps with proper parameters (like original_audio) but you still need to
+generate mp3/ogg and spectrograms by yourself.
+
+WARNING: generate_json.py's does NOT output valid json. You have to remove
+commas at the end of lists (",\s*]" and ",\s*}") for them to work (who the hell
+invented such a cumbersome format?).
+
+== Client side ==
+
+The client is coded in javascript using jquery and html5 features. It uses ajax
+communications with the server.
+
+Client scripts are called by the index.html file which lies in the root/
+directory. It relies heavily on jquery features for providing a dynamic
+application-like experience. The user interface is divided in 5 tabs:
+* Manager (upload files, run processing...)
+* Editor (view and edit transcripts, listen to audio files)
+* Export (download database content)
+* Log (see server log)
+* Help (keyboard shortcuts for editing)
+
+The basic layout components for each tab are contained in index.html, but the
+real core of the client is located in manager.js and editor.js. The manager
+uses tablesorter to display a table with information about each dialog. It also
+manages file uploads and basic actions on files. It uses an (emulated) event
+source to get push notifications from the server. The editor is more complex:
+It provides an audio player using the html5 audio tag with basic controls in a
+floating window. It also displays a list of segments for the current dialog
+(selected from the dropdown or using the manager's edit icon). Colorful
+characters (gender detected by the ASR system, left and right are for channels)
+and comic balloons representing their speech make the user experience more
+compelling. The transcript of a segment can be edited using keyboard shortcuts
+and mouse clicks. As only one segment can be edited at a time, keyboard
+shortcuts are bound to the window object, and therefore global. All edition
+intents (insert, delete, select, modify...) are implemented as generic actions
+that can be undone. This leads to full undo support at the segment level.
+
+In general, visual elements are implemented using custom semantic tags
+(sentence, lattice, wordlist...) which does not conform with the html standard,
+but allows for much clearer DOM trees. The general layout and colors can be
+configured in common.css.
+
+= TODO =
+
+* proper database instead of in-memory object.
+* segment editing (ability to change the sentence segmentation using the user
+  interface).
+* proper push notification handling.
+* integrate with semantic framework.
+* run word timing alignment after edition using asr system.
+* refactor user interface to integrate backend dialog objects with frontend DOM
+  tree (call delete on either synchronizes the other, on the client and server
+  side)
+

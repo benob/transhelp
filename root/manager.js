@@ -39,7 +39,7 @@ function list_files() {
             $(list).append(row);
             var row = $(list).children().last();
             $(row).find('td.action-select').html('<input class="select" type="checkbox" />');
-            $(row).find('td.action-edit').html('<a class="edit-transcript" href="#">edit</a>');
+            $(row).find('td.action-edit').html('<a class="edit-transcript" href="#" title="Edit transcript"><img border="0" src="images/icon-edit.png" /></a>');
         }
         /*$('#file_list td.original_audio').each(function () {
             $(this).html('<a href="' + $(this).html() + '">' + $(this).html() + '</a>');
@@ -60,9 +60,9 @@ function list_files() {
             var name = $(event.target).parents("tr").find(".name").html();
             $('#showname').val(name).change();
         });
-        $('#file_list').tablesorter({headers:{0:{sorter:false}, 7:{sorter:'usLongDate'}}}); 
+        $('#file_list').tablesorter({headers:{0:{sorter:false}, 1:{sorter:false}, 7:{sorter:'usLongDate'}}}); 
         $('#file_list').trigger('update');
-        $('#file_list').trigger('sorton', [[[5,1]]]);
+        $('#file_list').trigger('sorton', [[[3,0]]]);
     });
 };
 
